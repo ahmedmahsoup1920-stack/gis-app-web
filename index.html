@@ -512,39 +512,39 @@
     const map = L.map('map', { center: [31.236, 44.366], zoom: 11, zoomControl: true });
 
     const baseMaps = {
+        'Google Satellite (أوضح)': {
+            layer: L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 22, maxNativeZoom: 19, attribution: '© Google' }),
+            icon: 'fa-earth-asia',
+            color: '#2a9d8f'
+        },
+        'Google Hybrid': {
+            layer: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 22, maxNativeZoom: 19, attribution: '© Google' }),
+            icon: 'fa-layer-group',
+            color: '#f4a261'
+        },
         'ESRI World Imagery (فائقة الدقة)': {
-            layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 23, attribution: '© ESRI, Maxar, Earthstar Geographics' }),
+            layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, maxNativeZoom: 18, attribution: '© ESRI, Maxar, Earthstar Geographics' }),
             icon: 'fa-satellite',
             color: '#1a5a8a'
         },
         'ESRI Satellite (عالية الدقة)': {
-            layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 23, attribution: '© ESRI' }),
+            layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, maxNativeZoom: 18, attribution: '© ESRI' }),
             icon: 'fa-satellite',
             color: '#264653'
         },
-        'Google Hybrid': {
-            layer: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, attribution: '© Google' }),
-            icon: 'fa-layer-group',
-            color: '#f4a261'
-        },
-        'Google Satellite': {
-            layer: L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom: 20, attribution: '© Google' }),
-            icon: 'fa-earth-asia',
-            color: '#2a9d8f'
-        },
         'ESRI Street': {
-            layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© ESRI' }),
+            layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 19, attribution: '© ESRI' }),
             icon: 'fa-road',
             color: '#e76f51'
         },
         'OpenStreetMap': {
-            layer: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }),
+            layer: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, maxNativeZoom: 19, attribution: '© OpenStreetMap' }),
             icon: 'fa-globe-asia',
             color: '#2a9d8f'
         }
     };
 
-    let activeMap = 'ESRI World Imagery (فائقة الدقة)';
+    let activeMap = 'Google Satellite (أوضح)';
     let currentLayer = baseMaps[activeMap].layer;
     currentLayer.addTo(map);
 
@@ -2508,6 +2508,7 @@
                             type: 'raster',
                             tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
                             tileSize: 256,
+                            maxzoom: 18,
                             attribution: '© ESRI'
                         },
                         'terrain-dem': {
