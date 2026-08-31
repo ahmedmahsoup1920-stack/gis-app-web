@@ -64,10 +64,13 @@
         .map-dropdown .map-option.active .dot { border-color:#1a5a8a; }
         .map-dropdown .map-option .dot.fill { background:#1a5a8a; }
         /* ===== صندوق البحث عن الأماكن ===== */
-        .geo-search { position:absolute; top:14px; right:235px; z-index:1000; display:flex; align-items:center; background:white; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); border:1px solid #ddd; overflow:hidden; min-width:300px; max-width:40vw; }
-        .geo-search input { flex:1; border:none; outline:none; padding:11px 14px; font-size:13px; font-family:inherit; color:#0a2a44; min-width:0; }
-        .geo-search button { background:#1a5a8a; color:white; border:none; padding:0 16px; cursor:pointer; font-size:14px; flex-shrink:0; }
-        .geo-search button:hover { background:#0a2a44; }
+        .geo-search { position:absolute; top:14px; right:235px; z-index:1000; display:flex; align-items:center; background:#f2f6fa; border-radius:999px; box-shadow:0 4px 20px rgba(0,0,0,0.15); border:1.5px solid #d7e3ee; overflow:hidden; min-width:300px; max-width:40vw; transition:border-color 0.2s, box-shadow 0.2s; }
+        .geo-search:focus-within { border-color:#1a5a8a; box-shadow:0 4px 20px rgba(26,90,138,0.3); }
+        .geo-search input { flex:1; border:none; outline:none; padding:11px 16px; font-size:13px; font-family:inherit; color:#0a2a44; min-width:0; background:transparent; }
+        .geo-search input::placeholder { color:#93a4b5; }
+        .geo-search button { background:linear-gradient(135deg,#0a2a44,#1a5a8a); color:white; border:none; margin:4px; border-radius:999px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; flex-shrink:0; box-shadow:0 2px 8px rgba(10,42,68,0.3); transition:transform 0.2s, box-shadow 0.2s; }
+        .geo-search button:hover { transform:scale(1.08); box-shadow:0 4px 12px rgba(10,42,68,0.42); }
+        .geo-search button:active { transform:scale(0.95); }
         .search-pin { color:#e63946; font-size:38px; text-shadow:0 2px 8px rgba(0,0,0,0.45); filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }
         .search-pin-wrap { animation:pinFloat 1.4s ease-in-out infinite; }
         @keyframes pinFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
