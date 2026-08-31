@@ -63,6 +63,14 @@
         .map-dropdown .map-option .dot { width:12px; height:12px; border-radius:50%; border:2px solid #ddd; flex-shrink:0; }
         .map-dropdown .map-option.active .dot { border-color:#1a5a8a; }
         .map-dropdown .map-option .dot.fill { background:#1a5a8a; }
+        /* ===== صندوق البحث عن الأماكن ===== */
+        .geo-search { position:absolute; top:14px; right:235px; z-index:1000; display:flex; align-items:center; background:white; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); border:1px solid #ddd; overflow:hidden; min-width:300px; max-width:40vw; }
+        .geo-search input { flex:1; border:none; outline:none; padding:11px 14px; font-size:13px; font-family:inherit; color:#0a2a44; min-width:0; }
+        .geo-search button { background:#1a5a8a; color:white; border:none; padding:0 16px; cursor:pointer; font-size:14px; flex-shrink:0; }
+        .geo-search button:hover { background:#0a2a44; }
+        .search-pin { color:#e63946; font-size:38px; text-shadow:0 2px 8px rgba(0,0,0,0.45); filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }
+        .search-pin-wrap { animation:pinFloat 1.4s ease-in-out infinite; }
+        @keyframes pinFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
         .controls { position:absolute; bottom:15px; left:50%; transform:translateX(-50%); z-index:500; background:rgba(255,255,255,0.95); padding:8px 18px; border-radius:30px; box-shadow:0 4px 16px rgba(0,0,0,0.1); display:flex; gap:12px; align-items:center; font-size:12px; border:1px solid #ddd; flex-wrap:wrap; justify-content:center; }
         .controls label { display:flex; align-items:center; gap:6px; cursor:pointer; color:#0a2a44; font-weight:500; }
         .controls label input { accent-color:#1a5a8a; width:16px; height:16px; }
@@ -101,6 +109,7 @@
             .overlay { display:none; position:fixed; top:55px; left:0; width:100%; height:calc(100vh - 55px); background:rgba(0,0,0,0.3); z-index:999; }
             .overlay.active { display:block; }
             .map-dropdown { top:10px; right:10px; min-width:160px; }
+            .geo-search { top:58px; right:10px; min-width:0; max-width:none; width:calc(100% - 20px); }
             .controls { padding:6px 12px; gap:8px; font-size:11px; width:calc(100% - 30px); bottom:10px; }
             .controls button { font-size:11px; padding:3px 10px; }
             .controls-divider { display:none; }
@@ -115,6 +124,7 @@
             .header .logo .title { font-size:12px; }
             .header .logo .icon { font-size:18px; padding:3px 8px; }
             .map-dropdown { min-width:140px; top:8px; right:8px; }
+            .geo-search { top:56px; right:8px; min-width:0; max-width:none; width:calc(100% - 16px); }
         }
         /* ===== أنماط المحتويات (TOC) المُصحّحة ===== */
         .toc-container { font-size:13px; }
@@ -388,13 +398,18 @@
     <div class="map-wrapper">
         <div id="map"></div>
 
-        <div class="map-dropdown" id="mapDropdown">
-            <div class="dropdown-header" id="dropdownHeader">
-                <span><i class="fas fa-globe"></i> الخريطة الحالية</span>
-                <i class="fas fa-chevron-down"></i>
+<div class="map-dropdown" id="mapDropdown">
+                <div class="dropdown-header" id="dropdownHeader">
+                    <span><i class="fas fa-globe"></i> الخريطة الحالية</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="dropdown-body" id="dropdownBody"></div>
             </div>
-            <div class="dropdown-body" id="dropdownBody"></div>
-        </div>
+
+            <div class="geo-search" id="geoSearch">
+                <input type="text" id="geoSearchInput" placeholder="ابحث عن مكان... مثال: الحرم في مكة، بغداد" />
+                <button id="geoSearchBtn" title="بحث عن المكان"><i class="fas fa-search"></i></button>
+            </div>
 
         <div class="loader" id="loader">
             <div class="spinner"></div>
@@ -583,6 +598,43 @@
         activeMap = key;
         renderDropdown();
     }
+
+    // ================================================================
+    //  البحث عن الأماكن (مثل خرائط جوجل)
+    // ================================================================
+    let searchMarker = null;
+
+    async function geocodePlace(query) {
+        const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=3&accept-language=ar&q=' + encodeURIComponent(query);
+        const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        return r.json();
+    }
+
+    window.searchPlace = async function() {
+        const inputEl = document.getElementById('geoSearchInput');
+        const q = (inputEl ? inputEl.value : '').trim();
+        if (!q) return;
+        let results = [];
+        try { results = await geocodePlace(q); } catch (_) {}
+        if (!results.length && /حرم|كعبة|مسجد/i.test(q)) {
+            try { results = await geocodePlace('مكة المكرمة السعودية'); } catch (_) {}
+        }
+        if (!results || !results.length) { alert('لم أجد المكان، جرّب كتابة مثل: مكة المكرمة، بغداد، الرياض'); return; }
+        const p = results[0];
+        const lat = parseFloat(p.lat), lon = parseFloat(p.lon);
+        if (searchMarker) map.removeLayer(searchMarker);
+        searchMarker = L.marker([lat, lon], {
+            icon: L.divIcon({ html: '<div class="search-pin-wrap"><i class="fas fa-map-marker-alt search-pin"></i></div>', className: '', iconSize: [38, 44], iconAnchor: [19, 42] })
+        }).addTo(map);
+        searchMarker.bindPopup('<div style="font-size:13px;line-height:1.6"><b>' + escapeHtml(p.display_name || q) + '</b></div>');
+        searchMarker.openPopup();
+        map.flyTo([lat, lon], Math.max(map.getZoom(), 17), { duration: 1.6 });
+    };
+
+    const geoSearchBtn = document.getElementById('geoSearchBtn');
+    if (geoSearchBtn) geoSearchBtn.addEventListener('click', window.searchPlace);
+    const geoSearchInput = document.getElementById('geoSearchInput');
+    if (geoSearchInput) geoSearchInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.searchPlace(); });
 
     // ================================================================
     //  أدوات الرسم والقياس
@@ -2504,12 +2556,12 @@
                 style: {
                     version: 8,
                     sources: {
-                        'esri-sat': {
+                        'google-sat': {
                             type: 'raster',
-                            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                            tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'],
                             tileSize: 256,
-                            maxzoom: 18,
-                            attribution: '© ESRI'
+                            maxzoom: 19,
+                            attribution: '© Google'
                         },
                         'terrain-dem': {
                             type: 'raster-dem',
@@ -2519,14 +2571,23 @@
                             maxzoom: 15
                         }
                     },
-                    layers: [{ id: 'esri-sat-layer', type: 'raster', source: 'esri-sat' }],
-                    terrain: { source: 'terrain-dem', exaggeration: 1.6 }
+                    layers: [{ id: 'sat-layer', type: 'raster', source: 'google-sat' }],
+                    terrain: { source: 'terrain-dem', exaggeration: 1.7 },
+                    sky: {
+                        'sky-color': '#a9c6de',
+                        'sky-horizon-blend': 0.7,
+                        'horizon-color': '#e8eef5',
+                        'fog-color': '#dbe8f2',
+                        'fog-ground-blend': 0.4
+                    },
+                    light: { anchor: 'viewport', color: '#ffffff', intensity: 0.5, position: [1.2, 105, 50] }
                 },
                 center: [center.lng, center.lat],
                 zoom: Math.max(map.getZoom() - 1, 8),
-                pitch: 60,
+                pitch: 65,
                 bearing: -15,
-                antialias: true
+                antialias: true,
+                maxPitch: 85
             });
             map3d.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-left');
             map3d.on('load', sync3DData);
