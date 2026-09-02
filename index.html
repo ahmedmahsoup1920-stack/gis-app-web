@@ -202,6 +202,7 @@
         .location-item .actions, .file-item .actions { display:flex; gap:4px; flex-shrink:0; }
         .location-item .actions button, .file-item .actions button { background:transparent; border:none; color:#999; cursor:pointer; padding:4px 6px; border-radius:6px; transition:all 0.2s; font-size:13px; }
         .location-item .actions .delete-loc:hover, .file-item .actions .delete-btn:hover { background:#fee; color:#c0392b; }
+        .file-item .actions .table-btn:hover { background:#e8f4f8; color:#1a5a8a; }
         .location-item .actions .edit-loc:hover { background:#e8f4f8; color:#1a5a8a; }
         .location-item .check, .file-item .check { color:#1a5a8a; opacity:0; transition:all 0.3s; }
         .location-item.active .check, .file-item.active .check { opacity:1; }
@@ -212,6 +213,14 @@
         .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000; justify-content:center; align-items:center; }
         .modal-overlay.active { display:flex; }
         .modal { background:white; border-radius:16px; padding:25px 30px; max-width:420px; width:90%; box-shadow:0 8px 40px rgba(0,0,0,0.2); animation:modalIn 0.3s ease; }
+        .modal-wide { max-width:92vw; width:920px; display:flex; flex-direction:column; max-height:90vh; padding:20px 22px; }
+        .data-table-search { width:100%; padding:9px 12px; border:1px solid #d7e3ee; border-radius:8px; font-size:13px; margin:10px 0; font-family:inherit; box-sizing:border-box; }
+        .data-table-wrap { overflow:auto; border:1px solid #e1ecf1; border-radius:10px; max-height:62vh; background:#fff; }
+        .data-table-wrap table { border-collapse:collapse; width:100%; font-size:12px; white-space:nowrap; }
+        .data-table-wrap th { position:sticky; top:0; background:#0a2a44; color:#fff; padding:8px 10px; text-align:right; font-weight:600; z-index:1; }
+        .data-table-wrap td { border-bottom:1px solid #eef2f5; padding:6px 10px; color:#333; }
+        .data-table-wrap tbody tr:nth-child(even) { background:#f7fafc; }
+        .data-table-wrap tbody tr:hover { background:#eef7f9; }
         @keyframes modalIn { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
         .modal h3 { color:#0a2a44; margin-bottom:15px; display:flex; align-items:center; gap:8px; }
         .modal label { display:block; font-size:13px; font-weight:600; color:#333; margin-top:12px; margin-bottom:4px; }
@@ -408,7 +417,7 @@
 
         <div class="upload-area" id="uploadArea">
             <button type="button" class="upload-btn" id="uploadBtn"><i class="fas fa-upload"></i> رفع ملف جديد</button>
-            <input type="file" id="fileInput" accept=".geojson,.json,.kml,.kmz,.dxf,.zip" style="display:none" />
+            <input type="file" id="fileInput" accept=".geojson,.json,.kml,.kmz,.dxf,.zip,.shp,.shx,.dbf,.prj" multiple style="display:none" />
             <div class="upload-hint"><i class="fas fa-info-circle"></i> GeoJSON · KML/KMZ · Shapefile (zip) · DXF</div>
             <div class="save-row">
                 <button type="button" class="save-btn" id="saveDataBtn" title="تنزيل حفظ نسخة على جهازك"><i class="fas fa-save"></i> حفظ على الجهاز</button>
@@ -450,6 +459,8 @@
             <span class="controls-divider"></span>
             <button class="measure-btn" id="measureDistBtn" title="قياس مسافة"><i class="fas fa-ruler"></i> <span class="btn-text">مسافة</span></button>
             <button class="measure-btn" id="measureAreaBtn" title="قياس مساحة"><i class="fas fa-draw-polygon"></i> <span class="btn-text">مساحة</span></button>
+            <span class="controls-divider"></span>
+            <button class="measure-btn" id="selectToolBtn" title="رسم مستطيل لتحديد جزء من البيانات ثم تصديره"><i class="fas fa-crop-alt"></i> <span class="btn-text">تحديد</span></button>
             <span class="controls-divider"></span>
             <select id="exportFormatSelect" title="صيغة التصدير">
                 <option value="geojson">GeoJSON</option>
@@ -535,6 +546,19 @@
 <!-- لوحة التحكم بالطبقة -->
 <div class="control-panel-overlay" id="controlPanelOverlay">
     <div class="control-panel" id="controlPanel"></div>
+</div>
+
+<!-- نافذة جدول بيانات الطبقة -->
+<div class="modal-overlay" id="dataTableModal">
+    <div class="modal modal-wide">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <h3 style="margin:0;"><i class="fas fa-table" style="color:#1a5a8a;"></i> <span id="dtTitle">جدول البيانات</span></h3>
+            <button type="button" id="dtClose" style="padding:7px 14px;border:none;border-radius:8px;background:#eee;color:#666;cursor:pointer;font-size:13px;font-family:inherit;"><i class="fas fa-times"></i> إغلاق</button>
+        </div>
+        <div style="font-size:12px;color:#888;margin-top:6px;" id="dtSummary"></div>
+        <input type="text" class="data-table-search" id="dtSearch" placeholder="🔍 بحث في الجدول..." />
+        <div class="data-table-wrap" id="dtWrap"></div>
+    </div>
 </div>
 
 </div><!-- /#appRoot -->
@@ -872,6 +896,21 @@
         }
     }
 
+    function applyCustomFeatureStyle(cf) {
+        if (!cf || !cf.layer) return;
+        const col = cf.color || '#0e8f8a';
+        const weight = cf.weight || 3;
+        const opacity = (cf.opacity !== undefined ? cf.opacity : 1);
+        if (cf.kind === 'نقطة' && cf.layer.setIcon) {
+            const sz = cf.size || 26;
+            cf.layer.setIcon(L.divIcon({ html: `<i class="fas fa-map-pin" style="color:${escapeHtml(col)};font-size:${sz}px;${opacity < 1 ? 'opacity:' + opacity + ';' : ''}"></i>`, className: '', iconSize: [sz, sz], iconAnchor: [sz / 2, sz] }));
+        } else if (cf.kind === 'نص' && cf.layer.setIcon) {
+            cf.layer.setIcon(L.divIcon({ html: `<div style="background:rgba(255,255,255,.95);border:1.5px solid ${escapeHtml(col)};border-radius:6px;padding:3px 9px;font-size:12px;font-weight:700;color:#0a2a44;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.15);transform:translate(-50%,-100%);${opacity < 1 ? 'opacity:' + opacity + ';' : ''}">${escapeHtml(cf.name)}</div>`, className: '', iconSize: null }));
+        } else if (cf.layer.setStyle) {
+            cf.layer.setStyle({ color: col, fillColor: col, weight: weight, opacity: opacity, fillOpacity: (cf.kind === 'خط' ? 0 : opacity) });
+        }
+    }
+
     function addCustomFeature(kind, name, desc, layer, geojsonFeature) {
         layer.addTo(customItems);
         if (layer.bindPopup) {
@@ -884,6 +923,7 @@
         const id = customIdCounter++;
         const defaultColor = kind === 'نقطة' ? '#e63946' : kind === 'خط' ? '#1a5a8a' : '#2a9d8f';
         customFeaturesData.push({ id, kind, name, desc, layer, geojson: geojsonFeature, color: defaultColor, weight: 3, opacity: 1 });
+        applyCustomFeatureStyle(customFeaturesData[customFeaturesData.length - 1]);
         renderCustomFeatures();
         updateTOC();
     }
@@ -1060,7 +1100,97 @@
         if (confirm('هل تريد مسح كل نتائج القياس؟')) { measureItems.clearLayers(); measurements = []; renderMeasureList(); }
     });
 
+    // ================================================================
+    //  أداة التحديد: اختيار جزء من البيانات داخل مستطيل ثم تصديره
+    // ================================================================
+    let selectMode = false;
+    let selectionLayer = null;
+    let selectRectHandler = null;
+    window.__selectedFeatures = { type: 'FeatureCollection', features: [] };
+
+    function pointInPolygon(latlng, poly) {
+        const x = latlng[0], y = latlng[1];
+        let inside = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+            const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+            if (((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi)) inside = !inside;
+        }
+        return inside;
+    }
+
+    function featureVertices(f) {
+        const g = f.geometry || {};
+        const out = [];
+        if (g.type === 'Point' || g.type === 'MultiPoint') {
+            (g.type === 'Point' ? [g.coordinates] : g.coordinates).forEach(c => { if (Array.isArray(c) && c.length >= 2) out.push([c[0], c[1]]); });
+        } else if (g.type === 'LineString' || g.type === 'MultiLineString') {
+            (g.type === 'LineString' ? [g.coordinates] : g.coordinates).forEach(l => (l || []).forEach(c => { if (Array.isArray(c) && c.length >= 2) out.push([c[0], c[1]]); }));
+        } else if (g.type === 'Polygon' || g.type === 'MultiPolygon') {
+            (g.type === 'Polygon' ? [g.coordinates] : g.coordinates).forEach(p => (p || []).forEach(r => (r || []).forEach(c => { if (Array.isArray(c) && c.length >= 2) out.push([c[0], c[1]]); })));
+        }
+        return out;
+    }
+
+    function clearSelectMode(keepFeatures) {
+        if (selectRectHandler) { try { selectRectHandler.disable(); } catch(e) {} selectRectHandler = null; }
+        if (selectionLayer) { map.removeLayer(selectionLayer); selectionLayer = null; }
+        selectMode = false;
+        document.getElementById('selectToolBtn').classList.remove('active');
+        if (!keepFeatures) window.__selectedFeatures = { type: 'FeatureCollection', features: [] };
+        if (!keepFeatures && typeof closeControlPanel === 'function') closeControlPanel();
+    }
+
+    function handleSelectRect(e) {
+        const ring = (e.layer.getLatLngs && e.layer.getLatLngs[0]) || [];
+        const poly = ring.map(ll => [ll.lng, ll.lat]);
+        if (poly.length < 3) { e.layer.remove(); return; }
+        const matched = [];
+        const source = [];
+        if (currentData && Array.isArray(currentData.features)) currentData.features.forEach(f => source.push(f));
+        customFeaturesData.forEach(cf => { if (cf.geojson && cf.geojson.geometry) source.push(cf.geojson); });
+        source.forEach(f => {
+            const pts = featureVertices(f);
+            if (!pts.length) return;
+            const hit = pts.some(p => pointInPolygon(p, poly));
+            if (hit) matched.push(JSON.parse(JSON.stringify(f)));
+        });
+        if (selectionLayer) map.removeLayer(selectionLayer);
+        e.layer.remove();
+        selectRectHandler = null;
+        if (!matched.length) {
+            clearSelectMode(true);
+            alert('لم يتم العثور على عناصر داخل المنطقة المحددة.');
+            return;
+        }
+        window.__selectedFeatures = { type: 'FeatureCollection', features: matched };
+        selectionLayer = L.geoJSON(window.__selectedFeatures, {
+            style: { color: '#f1c40f', weight: 3, fillColor: '#f1c40f', fillOpacity: 0.25, opacity: 1 },
+            pointToLayer: function(f, latlng) { return L.circleMarker(latlng, { radius: 10, color: '#f1c40f', weight: 3, fillColor: '#f1c40f', fillOpacity: 0.6 }); }
+        });
+        selectionLayer.addTo(map);
+        try { selectionLayer.getBounds().isValid() && map.fitBounds(selectionLayer.getBounds(), { padding: [30,30], maxZoom: 17 }); } catch(_) {}
+        document.getElementById('exportLayerBtn').querySelector('.btn-text').textContent = 'تصدير محدّد';
+        document.getElementById('selectToolBtn').classList.add('active');
+        alert(`تم تحديد ${matched.length} عنصر داخل المنطقة. زر التصدير سيصدّر العناصر المحددة فقط.`);
+    }
+
+    document.getElementById('selectToolBtn').addEventListener('click', function() {
+        if (selectMode) { clearSelectMode(false); document.getElementById('exportLayerBtn').querySelector('.btn-text').textContent = 'تصدير'; return; }
+        if (window.__selectedFeatures && Array.isArray(window.__selectedFeatures.features) && window.__selectedFeatures.features.length && !selectMode) {
+            clearSelectMode(false);
+            document.getElementById('exportLayerBtn').querySelector('.btn-text').textContent = 'تصدير';
+            return;
+        }
+        stopMeasuring();
+        stopCustomDraw();
+        selectMode = true;
+        this.classList.add('active');
+        selectRectHandler = new L.Draw.Rectangle(map, { shapeOptions: { color: '#f1c40f', weight: 2.5, fillOpacity: 0.12, dashArray: '6,4' } });
+        selectRectHandler.enable();
+    });
+
     map.on(L.Draw.Event.CREATED, function(e) {
+        if (selectMode) { handleSelectRect(e); return; }
         if (activeDrawTool === 'point' || activeDrawTool === 'line' || activeDrawTool === 'polygon') {
             const kindLabel = activeDrawTool === 'point' ? 'نقطة' : activeDrawTool === 'line' ? 'خط' : 'مضلع';
             const layer = e.layer;
@@ -1640,9 +1770,19 @@
         document.getElementById('fileInput').click();
     });
 
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-        if (this.files && this.files[0]) {
-            pendingFile = this.files[0];
+    document.getElementById('fileInput').addEventListener('change', async function(e) {
+        const files = this.files ? Array.from(this.files) : [];
+        if (files && files.length) {
+            let chosen = files[0];
+            const shapeFiles = files.filter(f => /\.(shp|shx|dbf|prj)$/i.test(f.name));
+            if (shapeFiles.length > 0 && /\.(shp|shx|dbf|prj)$/i.test(shapeFiles[0].name)) {
+                const zip = new JSZip();
+                shapeFiles.forEach(f => zip.file(f.name, f));
+                const blob = await zip.generateAsync({ type: 'blob' });
+                const base = (shapeFiles.find(f => /\.shp$/i.test(f.name)) || shapeFiles[0]).name.replace(/\.[^.]+$/, '');
+                chosen = new File([blob], base + '.zip', { type: 'application/zip' });
+            }
+            pendingFile = chosen;
             document.getElementById('uploadFileName').value = pendingFile.name.replace(/\.[^.]+$/, '');
             document.getElementById('uploadFileDesc').value = '';
             document.getElementById('uploadFileInfo').innerHTML = `<i class="fas fa-check-circle" style="color:#2a9d8f;"></i> ${pendingFile.name}`;
@@ -1853,7 +1993,10 @@
                         <div class="icon"><i class="fas fa-file-alt"></i></div>
                         <div class="info"><div class="name">${escapeHtml(f.name)}</div><div class="desc">${f.count} عنصر · ${escapeHtml(f.time)} ${f.desc ? '· ' + escapeHtml(f.desc) : ''}</div></div>
                         <div class="check"><i class="fas fa-check-circle"></i></div>
-                        <button class="delete-btn" data-id="${f.id}"><i class="fas fa-trash-alt"></i></button>
+                        <div class="actions">
+                            <button class="table-btn" data-id="${f.id}" title="عرض البيانات في جدول"><i class="fas fa-table"></i></button>
+                            <button class="delete-btn" data-id="${f.id}" title="حذف"><i class="fas fa-trash-alt"></i></button>
+                        </div>
                     </div>`;
         });
         container.innerHTML = html;
@@ -1876,6 +2019,13 @@
                     loadData(file.data, file.name);
                     renderFiles();
                 }
+            });
+        });
+
+        container.querySelectorAll('.table-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                window.openDataTable(parseInt(this.dataset.id));
             });
         });
 
@@ -1954,11 +2104,9 @@
                 if (t.file.name === currentFileName && geoLayer) applyStyleToCurrentLayer(getLayerStyle(t.file.name, 'polygon'), null);
             }
             updateTOC();
-        } else if (type === 'custom' && t.cf && t.cf.layer.setStyle) {
+        } else if (type === 'custom' && t.cf && t.cf.layer) {
             t.cf.color = color;
-            if (t.cf.kind === 'نقطة' && t.cf.layer.setIcon) { const sz = t.cf.size || 26; t.cf.layer.setIcon(L.divIcon({html:`<i class="fas fa-map-pin" style="color:${escapeHtml(color)};font-size:${sz}px;"></i>`,className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz]})); }
-            else if (t.cf.kind === 'نص' && t.cf.layer.setIcon) t.cf.layer.setIcon(L.divIcon({html:`<div style="background:rgba(255,255,255,.95);border:1.5px solid ${escapeHtml(color)};border-radius:6px;padding:3px 9px;font-size:12px;font-weight:700;color:#0a2a44;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.15);transform:translate(-50%,-100%);">${escapeHtml(t.cf.name)}</div>`,className:'',iconSize:null}));
-            else if (t.cf.layer.setStyle) t.cf.layer.setStyle({ color: color, fillColor: color });
+            applyCustomFeatureStyle(t.cf);
             updateTOC();
         } else if (type === 'location' && t.loc) {
             t.loc.color = color;
@@ -1992,9 +2140,9 @@
                 if (t.file.name === currentFileName && geoLayer) applyStyleToCurrentLayer(getLayerStyle(t.file.name, 'polygon'), null);
             }
             updateTOC();
-        } else if (type === 'custom' && t.cf && t.cf.layer.setStyle) {
+        } else if (type === 'custom' && t.cf && t.cf.layer && t.cf.kind !== 'نقطة' && t.cf.kind !== 'نص') {
             t.cf.weight = weight;
-            t.cf.layer.setStyle({ weight: weight });
+            applyCustomFeatureStyle(t.cf);
             updateTOC();
         }
     };
@@ -2012,9 +2160,9 @@
                 if (t.file.name === currentFileName && geoLayer) applyStyleToCurrentLayer(getLayerStyle(t.file.name, 'polygon'), null);
             }
             updateTOC();
-        } else if (type === 'custom' && t.cf && t.cf.layer.setStyle) {
+        } else if (type === 'custom' && t.cf && t.cf.layer) {
             t.cf.opacity = opacity;
-            t.cf.layer.setStyle({ fillOpacity: opacity, opacity: opacity });
+            applyCustomFeatureStyle(t.cf);
             updateTOC();
         }
     };
@@ -2029,14 +2177,30 @@
             updateTOC();
         } else if (type === 'custom' && t.cf && t.cf.layer && t.cf.kind === 'نقطة') {
             t.cf.size = radius;
-            t.cf.layer.setIcon(L.divIcon({ html: `<i class="fas fa-map-pin" style="color:${escapeHtml(t.cf.color || '#0e8f8a')};font-size:${radius}px;"></i>`, className: '', iconSize: [radius, radius], iconAnchor: [radius/2, radius] }));
+            applyCustomFeatureStyle(t.cf);
         }
     };
 
     window.zoomToItem = function(type, id, gtype) {
         if (type === 'file') {
             const file = uploadedFiles.find(f => f.id === id);
-            if (file) { loadData(file.data, file.name); renderFiles(); updateTOC(); }
+            if (!file) return;
+            if (!currentData || currentFileName !== file.name) {
+                loadData(file.data, file.name);
+                renderFiles();
+                updateTOC();
+                return;
+            }
+            let feats = (currentData && Array.isArray(currentData.features)) ? currentData.features : [];
+            if (gtype) {
+                const want = { point: 'point', line: 'line', polygon: 'polygon' }[gtype];
+                feats = feats.filter(feat => geomTypeOf(feat) === want);
+            }
+            try {
+                const g = L.geoJSON({ type: 'FeatureCollection', features: feats });
+                const b = g.getBounds();
+                if (b.isValid()) map.fitBounds(b, { padding: [50,50], maxZoom: 18 });
+            } catch(_) {}
         } else if (type === 'custom') {
             const cf = customFeaturesData.find(c => c.id === id);
             if (cf) {
@@ -2050,6 +2214,54 @@
             if (loc) map.flyTo([loc.lat, loc.lng], 15, { duration: 1.2 });
         }
     };
+
+    // جدول بيانات الطبقة (منظم بالصفوف والأعمدة) لاستعراض السجلات الكثيرة
+    window.openDataTable = function(fileId) {
+        const file = uploadedFiles.find(f => f.id === fileId);
+        if (!file || !file.data || !Array.isArray(file.data.features) || !file.data.features.length) { alert('لا توجد بيانات لعرضها في الجدول.'); return; }
+        const feats = file.data.features;
+        const cols = [];
+        const seen = {};
+        feats.forEach(f => { const p = f.properties || {}; Object.keys(p).forEach(k => { if (!seen[k]) { seen[k] = 1; cols.push(k); } }); });
+        cols.sort((a, b) => String(a).localeCompare(String(b), 'ar'));
+        cols.push('__gtype');
+        window.__dt = { feats, cols };
+        document.getElementById('dtTitle').textContent = file.name;
+        document.getElementById('dtSummary').textContent = `عدد السجلات: ${feats.length} · عدد الأعمدة: ${cols.length - 1}`;
+        document.getElementById('dtSearch').value = '';
+        renderDataTable('');
+        document.getElementById('dataTableModal').classList.add('active');
+    };
+
+    function renderDataTable(q) {
+        const dt = window.__dt || { feats: [], cols: [] };
+        const cols = dt.cols, feats = dt.feats;
+        q = (q || '').trim().toLowerCase();
+        let filtered = feats;
+        if (q) filtered = feats.filter(f => {
+            const p = f.properties || {};
+            return cols.some(k => k !== '__gtype' && String(p[k] ?? '').toLowerCase().includes(q));
+        });
+        const gtypeLabels = { point: 'نقطة', line: 'خط', polygon: 'مضلع' };
+        const MAX_ROWS = 2000;
+        const shown = Math.min(filtered.length, MAX_ROWS);
+        const head = cols.map(k => `<th>${escapeHtml(k === '__gtype' ? 'النوع الهندسي' : k)}</th>`).join('');
+        let body = '';
+        for (let i = 0; i < shown; i++) {
+            const p = filtered[i].properties || {};
+            body += `<tr>${cols.map(k => {
+                if (k === '__gtype') return `<td><span style="padding:2px 8px;border-radius:20px;background:#e7f1f8;color:#1a5a8a;font-size:11px;">${escapeHtml(gtypeLabels[geomTypeOf(filtered[i])] || '')}</span></td>`;
+                const v = p[k];
+                return `<td>${v === null || v === undefined || v === '' ? '<span style="color:#bbb;">—</span>' : escapeHtml(String(v))}</td>`;
+            }).join('')}</tr>`;
+        }
+        const note = filtered.length > MAX_ROWS ? `<div style="padding:6px 10px;background:#fff7e6;color:#8a6d1a;font-size:11.5px;">يوجد ${filtered.length} سجل — يتم عرض أول ${MAX_ROWS} فقط، استخدم البحث للتصفية.</div>` : '';
+        document.getElementById('dtWrap').innerHTML = note + `<table><thead><tr>${head}</tr></thead><tbody>${body || `<tr><td colspan="${cols.length}" style="text-align:center;color:#999;padding:20px;">لا توجد نتائج مطابقة</td></tr>`}</tbody></table>`;
+    }
+
+    document.getElementById('dtSearch').addEventListener('input', function() { renderDataTable(this.value); });
+    document.getElementById('dtClose').addEventListener('click', function() { document.getElementById('dataTableModal').classList.remove('active'); });
+    document.getElementById('dataTableModal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('active'); });
 
     window.deleteTocItem = function(type, id, gtype) {
         if (type === 'file') {
@@ -2417,7 +2629,7 @@
                                 <i class="fas fa-chevron-down toggle-icon open" style="margin-left:auto;" id="subicon_${groupId}_${td.key}"></i>
                             </div>
                             <div class="toc-sub-body" id="sub_${groupId}_${td.key}">
-                                <div class="toc-item ${isShown ? 'active' : ''}" data-type="file" data-id="${f.id}" data-gtype="${td.key}" onclick="window.openControlPanel('file',${f.id},'${td.key}')">
+                                <div class="toc-item ${isShown ? 'active' : ''}" data-type="file" data-id="${f.id}" data-gtype="${td.key}" onclick="window.zoomToItem('file',${f.id},'${td.key}'); window.openControlPanel('file',${f.id},'${td.key}')">
                                     <input type="checkbox" class="toc-check" checked onchange="window.toggleFileTypeVisibility(${f.id},'${td.key}',this.checked)" onclick="event.stopPropagation();" />
                                     <div class="toc-swatch" style="background:${col};border-color:${col};" title="اضغط لضبط الطبقة">${tocSwatchPicker('file',f.id,td.key,col)}</div>
                                     <div class="toc-info">
@@ -2453,7 +2665,7 @@
                 if (cf.name.toLowerCase().includes(search) || (cf.desc || '').toLowerCase().includes(search) || !search) {
                     totalItems++;
                     const col = cf.color || '#0e8f8a';
-                    html += `<div class="toc-item" data-type="custom" data-id="${cf.id}" onclick="window.openControlPanel('custom',${cf.id})">
+                    html += `<div class="toc-item" data-type="custom" data-id="${cf.id}" onclick="window.zoomToItem('custom',${cf.id}); window.openControlPanel('custom',${cf.id})">
                                 <div class="toc-check"><i class="fas ${iconMap[cf.kind] || 'fa-shapes'}" style="color:${col};"></i></div>
                                 <div class="toc-swatch" style="background:${col};border-color:${col};" title="اضغط لضبط">${tocSwatchPicker('custom',cf.id,null,col)}</div>
                                 <div class="toc-info">
@@ -2484,7 +2696,7 @@
                 if (loc.name.toLowerCase().includes(search) || (loc.desc || '').toLowerCase().includes(search) || !search) {
                     totalItems++;
                     const col = loc.color || '#e63946';
-                    html += `<div class="toc-item" data-type="location" data-id="${loc.id}" onclick="window.openControlPanel('location',${loc.id})">
+                    html += `<div class="toc-item" data-type="location" data-id="${loc.id}" onclick="window.zoomToItem('location',${loc.id}); window.openControlPanel('location',${loc.id})">
                                 <div class="toc-check"><i class="fas fa-map-pin" style="color:${col};"></i></div>
                                 <div class="toc-swatch" style="background:${col};border-color:${col};" title="اضغط لضبط">${tocSwatchPicker('location',loc.id,null,col)}</div>
                                 <div class="toc-info">
@@ -2632,21 +2844,39 @@
         }
         const fmt = document.getElementById('exportFormatSelect').value;
         const baseName = (currentFileName || 'تصدير').replace(/\.[^.]+$/, '');
+        const selected = window.__selectedFeatures && Array.isArray(window.__selectedFeatures.features) && window.__selectedFeatures.features.length ? true : false;
+        const outputName = (selected ? (baseName + '_محدد') : baseName);
 
         try {
             if (fmt === 'geojson') {
-                downloadBlob(JSON.stringify(data, null, 2), `${baseName}.geojson`, 'application/geo+json');
+                downloadBlob(JSON.stringify(data, null, 2), `${outputName}.geojson`, 'application/geo+json');
             } else if (fmt === 'kml') {
-                downloadBlob(geojsonToKML(data, baseName), `${baseName}.kml`, 'application/vnd.google-earth.kml+xml');
+                downloadBlob(geojsonToKML(data, outputName), `${outputName}.kml`, 'application/vnd.google-earth.kml+xml');
             } else if (fmt === 'dxf') {
-                const dxfContent = geojsonToDXF_R12(data, baseName);
-                downloadBlob(dxfContent, `${baseName}.dxf`, 'application/dxf');
+                const dxfContent = geojsonToDXF_R12(data, outputName);
+                downloadBlob(dxfContent, `${outputName}.dxf`, 'application/dxf');
             } else if (fmt === 'shp') {
                 if (!window.shpwrite || !window.saveAs) throw new Error('مكتبة تصدير Shapefile غير متاحة.');
-                const zipBlob = await shpwrite.zip(data, { outputType: 'blob', folder: baseName, filename: baseName });
-                saveAs(zipBlob, `${baseName}.zip`);
+                const zipBlob = await shpwrite.zip(data, {
+                    outputType: 'blob',
+                    folder: outputName,
+                    filename: outputName,
+                    types: { Point: 'point', MultiPoint: 'point', LineString: 'line', MultiLineString: 'line', Polygon: 'polygon', MultiPolygon: 'polygon' }
+                });
+                const PRJ_WGS84 = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]';
+                const jsZip = await JSZip.loadAsync(zipBlob);
+                Object.keys(jsZip.files).forEach(name => {
+                    if (jsZip.files[name].dir) return;
+                    if (/\.(shp|shx|dbf)$/i.test(name)) {
+                        const base = name.replace(/\.[^.]+$/, '');
+                        if (!jsZip.files[base + '.prj']) jsZip.file(base + '.prj', PRJ_WGS84);
+                        if (!jsZip.files[base + '.cpg']) jsZip.file(base + '.cpg', 'UTF-8');
+                    }
+                });
+                const fixedZip = await jsZip.generateAsync({ type: 'blob', mimeType: 'application/zip' });
+                saveAs(fixedZip, `${outputName}.zip`);
             }
-            showSaveStatus(`⬇️ تم تصدير الطبقة بصيغة ${fmt.toUpperCase()}`);
+            showSaveStatus(`⬇️ تم تصدير ${selected ? 'العناصر المحددة (' + data.features.length + ')' : 'الطبقة (' + data.features.length + ')'} بصيغة ${fmt.toUpperCase()}`);
         } catch(e) {
             console.error(e);
             alert(`❌ تعذر التصدير: ${e.message}`);
@@ -2654,10 +2884,26 @@
     });
 
     function getExportableData() {
-        return {
-            type: 'FeatureCollection',
-            features: currentData && Array.isArray(currentData.features) ? currentData.features.slice() : []
-        };
+        let features = null;
+        if (window.__selectedFeatures && Array.isArray(window.__selectedFeatures.features) && window.__selectedFeatures.features.length) {
+            features = window.__selectedFeatures.features.slice();
+        } else {
+            features = [];
+            (uploadedFiles || []).forEach(f => {
+                if (f.data && Array.isArray(f.data.features)) f.data.features.forEach(feat => features.push(feat));
+            });
+            (customFeaturesData || []).forEach(cf => {
+                if (cf.geojson && cf.geojson.geometry) features.push(cf.geojson);
+            });
+            (locations || []).forEach(loc => {
+                if (loc && !isNaN(loc.lat) && !isNaN(loc.lng)) features.push({
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: [loc.lng, loc.lat] },
+                    properties: { name: loc.name || '', description: loc.desc || '', category: 'موقع', color: loc.color || '#e63946' }
+                });
+            });
+        }
+        return { type: 'FeatureCollection', features };
     }
 
     function downloadBlob(content, filename, mime) {
@@ -2784,6 +3030,8 @@
     });
 
     document.getElementById('clearBtn').addEventListener('click', function() {
+        clearSelectMode(false);
+        document.getElementById('exportLayerBtn').querySelector('.btn-text').textContent = 'تصدير';
         drawnItems.clearLayers();
         measureItems.clearLayers();
         customItems.clearLayers();
@@ -3008,6 +3256,7 @@
                     layer.addTo(customItems);
                     if(layer.bindPopup) layer.bindPopup(`<div style="font-size:13px;max-width:220px;"><strong style="color:#0a2a44;">${escapeHtml(cf.name)}</strong>${cf.desc?'<br><span style="color:#666;font-size:12px;">'+escapeHtml(cf.desc)+'</span>':''}</div>`);
                     customFeaturesData.push({...cf,layer,color:cf.color||'#0e8f8a',weight:cf.weight||3,opacity:cf.opacity??1});
+                    applyCustomFeatureStyle(customFeaturesData[customFeaturesData.length - 1]);
                 } catch(e) { console.error('تعذر استرجاع عنصر مرسوم',e); }
             });
         }
