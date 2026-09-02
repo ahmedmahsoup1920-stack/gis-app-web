@@ -344,6 +344,7 @@
             <button data-tab="locations"><i class="fas fa-map-pin"></i> المواقع</button>
             <button data-tab="files"><i class="fas fa-folder-open"></i> المرفوعات</button>
             <button data-tab="draw"><i class="fas fa-pen"></i> رسم</button>
+            <button data-tab="settings"><i class="fas fa-cog"></i> إعدادات</button>
         </div>
 
         <div class="content">
@@ -388,6 +389,19 @@
                     <button class="draw-tool-btn" id="drawTextBtn"><i class="fas fa-font"></i> نص</button>
                 </div>
                 <div id="customFeaturesList"></div>
+            </div>
+            <div class="tab-pane" id="tab-settings">
+                <div class="tab-header">
+                    <h4><i class="fas fa-cog"></i> إعدادات البحث</h4>
+                </div>
+                <div style="padding:12px;font-size:12px;color:#555;line-height:1.7">
+                    <p>للبحث عن الأماكن بدون تقطيع، ضع مفتاح Nominatim المجاني (بيسمح بآلاف الطلبات اليوم).</p>
+                    <label style="display:block;font-weight:600;margin-bottom:4px;color:#0a2a44">مفتاح Nominatim (اختياري):</label>
+                    <input type="text" id="geoKeyInput" placeholder="الصق المفتاح هنا..." style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:6px" />
+                    <button type="button" id="geoKeySaveBtn" style="width:100%;padding:9px;background:#1a5a8a;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">حفظ المفتاح</button>
+                    <div class="save-status" id="geoKeyStatus"></div>
+                    <p style="color:#888;margin-top:8px">كيفية الحصول عليه: سجّل في nominatim.openstreetmap.org ثم ولّد API Key.</p>
+                </div>
             </div>
         </div>
 
@@ -618,9 +632,16 @@
     // ================================================================
     let searchMarker = null;
 
+    function nominatimHeaders() {
+        const h = { 'Accept': 'application/json' };
+        try { const k = (localStorage.getItem('geoKey') || '').trim(); if (k) h['Authorization'] = k; } catch (_) {}
+        return h;
+    }
+
     async function geocodePlace(query) {
-        const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=3&accept-language=ar&q=' + encodeURIComponent(query);
-        const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        const limit = (localStorage.getItem('geoKey') || '').trim() ? 5 : 3;
+        const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=' + limit + '&accept-language=ar&q=' + encodeURIComponent(query);
+        const r = await fetch(url, { headers: nominatimHeaders() });
         return r.json();
     }
 
@@ -684,13 +705,13 @@
             let out = [];
             const query = q.length === 1 ? (q + ' ' + q) : q;
             try {
-                const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=ar&countrycodes=' + encodeURIComponent(countryHints(q)) + '&q=' + encodeURIComponent(query), { headers: { 'Accept': 'application/json' } });
+                const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=ar&countrycodes=' + encodeURIComponent(countryHints(q)) + '&q=' + encodeURIComponent(query), { headers: nominatimHeaders() });
                 out = await r.json();
             } catch (_) {}
             if (!Array.isArray(out)) out = [];
             if ((out.length < 4 || q.length === 1) && /[مم]/.test(q)) {
                 try {
-                    const r2 = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=ar&countrycodes=mk,sa,eg,ae,qa,sa&q=' + encodeURIComponent(query), { headers: { 'Accept': 'application/json' } });
+                    const r2 = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=ar&countrycodes=mk,sa,eg,ae,qa,sa&q=' + encodeURIComponent(query), { headers: nominatimHeaders() });
                     const o2 = await r2.json();
                     if (Array.isArray(o2)) out = dedupeSuggest(out.concat(o2));
                 } catch (_) {}
@@ -700,7 +721,7 @@
             }).slice(0, 6);
             suggestIndex = -1;
             renderSuggest();
-        }, 180);
+        }, 600);
     }
 
     function countryHints(q) { return ''; }
@@ -751,6 +772,23 @@
             if (geoBox && !geoBox.contains(e.target)) closeSuggest();
         });
     }
+
+    // ===== حفظ مفتاح Nominatim =====
+    (function() {
+        const kInput = document.getElementById('geoKeyInput');
+        if (!kInput) return;
+        try { kInput.value = localStorage.getItem('geoKey') || ''; } catch (_) {}
+        const saveBtn = document.getElementById('geoKeySaveBtn');
+        const statusEl = document.getElementById('geoKeyStatus');
+        if (saveBtn) saveBtn.addEventListener('click', function() {
+            const v = kInput.value.trim();
+            try { if (v) localStorage.setItem('geoKey', v); else localStorage.removeItem('geoKey'); } catch (_) {}
+            if (!statusEl) return;
+            statusEl.textContent = v ? '✅ تم حفظ المفتاح. الآن البحث بيعمل بلا تقطيع.' : 'تمت إزالة المفتاح.';
+            statusEl.className = 'save-status show';
+            setTimeout(function(){ statusEl.className = 'save-status'; }, 4000);
+        });
+    })();
 
     // ================================================================
     //  أدوات الرسم والقياس
