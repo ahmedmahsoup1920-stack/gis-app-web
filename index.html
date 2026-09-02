@@ -681,22 +681,36 @@
         if (suggestTimer) clearTimeout(suggestTimer);
         suggestTimer = setTimeout(async function() {
             let out = [];
+            const query = q.length === 1 ? (q + ' ' + q) : q;
             try {
-                const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=ar&q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } });
+                const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=ar&countrycodes=' + encodeURIComponent(countryHints(q)) + '&q=' + encodeURIComponent(query), { headers: { 'Accept': 'application/json' } });
                 out = await r.json();
             } catch (_) {}
-            if (out.length < 2 && /حرم|كعبة|مسجد/i.test(q)) {
+            if (!Array.isArray(out)) out = [];
+            if ((out.length < 4 || q.length === 1) && /[مم]/.test(q)) {
                 try {
-                    const r2 = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=ar&q=' + encodeURIComponent('مكة المكرمة السعودية'), { headers: { 'Accept': 'application/json' } });
-                    out = r2 && r2.json ? await r2.json() : [];
+                    const r2 = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=ar&countrycodes=mk,sa,eg,ae,qa,sa&q=' + encodeURIComponent(query), { headers: { 'Accept': 'application/json' } });
+                    const o2 = await r2.json();
+                    if (Array.isArray(o2)) out = dedupeSuggest(out.concat(o2));
                 } catch (_) {}
             }
-            suggestResults = out.filter(Boolean).map(function(p) {
+            suggestResults = (out || []).filter(Boolean).map(function(p) {
                 return { display_name: p.display_name, lat: parseFloat(p.lat), lon: parseFloat(p.lon) };
-            });
+            }).slice(0, 6);
             suggestIndex = -1;
             renderSuggest();
-        }, 220);
+        }, 180);
+    }
+
+    function countryHints(q) { return ''; }
+
+    function dedupeSuggest(arr) {
+        const seen = {}; const out = [];
+        for (let i = 0; i < arr.length; i++) {
+            const k = arr[i].lat + '_' + arr[i].lon + '_' + (arr[i].display_name || '');
+            if (!seen[k]) { seen[k] = 1; out.push(arr[i]); }
+        }
+        return out;
     }
 
     function pickSuggestion(i) {
