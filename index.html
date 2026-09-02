@@ -64,14 +64,15 @@
         .map-dropdown .map-option.active .dot { border-color:#1a5a8a; }
         .map-dropdown .map-option .dot.fill { background:#1a5a8a; }
         /* ===== صندوق البحث عن الأماكن ===== */
-        .geo-search { position:absolute; top:14px; right:235px; z-index:1000; display:flex; align-items:center; background:#f2f6fa; border-radius:999px; box-shadow:0 4px 20px rgba(0,0,0,0.15); border:1.5px solid #d7e3ee; overflow:hidden; min-width:300px; max-width:40vw; transition:border-color 0.2s, box-shadow 0.2s; }
+        .geo-search-wrap { position:absolute; top:14px; right:235px; z-index:1000; min-width:300px; max-width:40vw; }
+        .geo-search { display:flex; align-items:center; background:#f2f6fa; border-radius:999px; box-shadow:0 4px 20px rgba(0,0,0,0.15); border:1.5px solid #d7e3ee; transition:border-color 0.2s, box-shadow 0.2s; }
         .geo-search:focus-within { border-color:#1a5a8a; box-shadow:0 4px 20px rgba(26,90,138,0.3); }
-        .geo-search input { flex:1; border:none; outline:none; padding:11px 16px; font-size:13px; font-family:inherit; color:#0a2a44; min-width:0; background:transparent; }
+        .geo-search input { flex:1; border:none; outline:none; padding:11px 16px; font-size:13px; font-family:inherit; color:#0a2a44; min-width:0; background:transparent; border-radius:999px 0 0 999px; }
         .geo-search input::placeholder { color:#93a4b5; }
         .geo-search button { background:linear-gradient(135deg,#0a2a44,#1a5a8a); color:white; border:none; margin:4px; border-radius:999px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; flex-shrink:0; box-shadow:0 2px 8px rgba(10,42,68,0.3); transition:transform 0.2s, box-shadow 0.2s; }
         .geo-search button:hover { transform:scale(1.08); box-shadow:0 4px 12px rgba(10,42,68,0.42); }
         .geo-search button:active { transform:scale(0.95); }
-        .geo-suggest { position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:1005; background:white; border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,0.22); border:1px solid #e3ebf2; overflow:hidden; display:none; max-height:320px; overflow-y:auto; }
+        .geo-suggest { position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:1005; background:white; border-radius:14px; box-shadow:0 8px 28px rgba(0,0,0,0.22); border:1px solid #e3ebf2; overflow:hidden; display:none; max-height:320px; overflow-y:auto; }
         .geo-suggest.open { display:block; }
         .geo-suggest-item { padding:11px 16px; font-size:13px; color:#0a2a44; cursor:pointer; text-align:right; display:flex; align-items:center; gap:10px; border-bottom:1px solid #f2f6fa; }
         .geo-suggest-item:last-child { border-bottom:none; }
@@ -119,7 +120,7 @@
             .overlay { display:none; position:fixed; top:55px; left:0; width:100%; height:calc(100vh - 55px); background:rgba(0,0,0,0.3); z-index:999; }
             .overlay.active { display:block; }
             .map-dropdown { top:10px; right:10px; min-width:160px; }
-            .geo-search { top:58px; right:10px; min-width:0; max-width:none; width:calc(100% - 20px); }
+            .geo-search-wrap { top:58px; right:10px; min-width:0; max-width:none; width:calc(100% - 20px); }
             .controls { padding:6px 12px; gap:8px; font-size:11px; width:calc(100% - 30px); bottom:10px; }
             .controls button { font-size:11px; padding:3px 10px; }
             .controls-divider { display:none; }
@@ -134,7 +135,7 @@
             .header .logo .title { font-size:12px; }
             .header .logo .icon { font-size:18px; padding:3px 8px; }
             .map-dropdown { min-width:140px; top:8px; right:8px; }
-            .geo-search { top:56px; right:8px; min-width:0; max-width:none; width:calc(100% - 16px); }
+            .geo-search-wrap { top:56px; right:8px; min-width:0; max-width:none; width:calc(100% - 16px); }
         }
         /* ===== أنماط المحتويات (TOC) المُصحّحة ===== */
         .toc-container { font-size:13px; }
@@ -416,9 +417,11 @@
                 <div class="dropdown-body" id="dropdownBody"></div>
             </div>
 
-            <div class="geo-search" id="geoSearch">
-                <input type="text" id="geoSearchInput" placeholder="ابحث عن مكان... مثال: الحرم في مكة، بغداد" />
-                <button id="geoSearchBtn" title="بحث عن المكان"><i class="fas fa-search"></i></button>
+            <div class="geo-search-wrap" id="geoSearchWrap">
+                <div class="geo-search" id="geoSearch">
+                    <input type="text" id="geoSearchInput" placeholder="ابحث عن مكان... مثال: الحرم في مكة، بغداد" />
+                    <button id="geoSearchBtn" title="بحث عن المكان"><i class="fas fa-search"></i></button>
+                </div>
                 <div class="geo-suggest" id="geoSuggest"></div>
             </div>
 
@@ -630,8 +633,7 @@
         if (!results.length && /حرم|كعبة|مسجد/i.test(q)) {
             try { results = await geocodePlace('مكة المكرمة السعودية'); } catch (_) {}
         }
-        if (!results || !results.length) { alert('لم أجد المكان، جرّب كتابة مثل: مكة المكرمة، بغداد، الرياض'); return; }
-        const p = results[0];
+        if (!results || !results.length) { alert('لم أجد المكان، جرّب كتابة مثل: مكة المكرمة، بغداد، الرياض'); return; }        const p = results[0];
         const lat = parseFloat(p.lat), lon = parseFloat(p.lon);
         if (searchMarker) map.removeLayer(searchMarker);
         searchMarker = L.marker([lat, lon], {
@@ -644,12 +646,11 @@
 
     const geoSearchBtn = document.getElementById('geoSearchBtn');
     if (geoSearchBtn) geoSearchBtn.addEventListener('click', window.searchPlace);
-    const geoSearchInput = document.getElementById('geoSearchInput');
-    if (geoSearchInput) geoSearchInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.searchPlace(); });
 
     // ===== اقتراحات حية أثناء الكتابة (مثل جوجل) =====
-    const geoBox = document.getElementById('geoSearch');
+    const geoBox = document.getElementById('geoSearchWrap');
     const geoSuggest = document.getElementById('geoSuggest');
+    const geoSearchInput = document.getElementById('geoSearchInput');
     let suggestTimer = null, suggestResults = [], suggestIndex = -1;
 
     function renderSuggest() {
@@ -739,7 +740,9 @@
             if (e.key === 'ArrowDown') { e.preventDefault(); if (!geoSuggest.classList.contains('open')) return; suggestIndex = (suggestIndex + 1) % suggestResults.length; paintSuggestIndex(); }
             else if (e.key === 'ArrowUp') { e.preventDefault(); if (!geoSuggest.classList.contains('open')) return; suggestIndex = (suggestIndex - 1 + suggestResults.length) % suggestResults.length; paintSuggestIndex(); }
             else if (e.key === 'Enter') {
-                if (suggestIndex >= 0 && suggestResults[suggestIndex]) { e.preventDefault(); pickSuggestion(suggestIndex); }
+                e.preventDefault();
+                if (suggestIndex >= 0 && suggestResults[suggestIndex]) { pickSuggestion(suggestIndex); }
+                else if (suggestResults.length) { pickSuggestion(0); }
                 else window.searchPlace();
             }
             else if (e.key === 'Escape') closeSuggest();
