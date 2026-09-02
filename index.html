@@ -71,6 +71,13 @@
         .geo-search button { background:linear-gradient(135deg,#0a2a44,#1a5a8a); color:white; border:none; margin:4px; border-radius:999px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; flex-shrink:0; box-shadow:0 2px 8px rgba(10,42,68,0.3); transition:transform 0.2s, box-shadow 0.2s; }
         .geo-search button:hover { transform:scale(1.08); box-shadow:0 4px 12px rgba(10,42,68,0.42); }
         .geo-search button:active { transform:scale(0.95); }
+        .geo-suggest { position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:1005; background:white; border-radius:12px; box-shadow:0 8px 28px rgba(0,0,0,0.22); border:1px solid #e3ebf2; overflow:hidden; display:none; max-height:320px; overflow-y:auto; }
+        .geo-suggest.open { display:block; }
+        .geo-suggest-item { padding:11px 16px; font-size:13px; color:#0a2a44; cursor:pointer; text-align:right; display:flex; align-items:center; gap:10px; border-bottom:1px solid #f2f6fa; }
+        .geo-suggest-item:last-child { border-bottom:none; }
+        .geo-suggest-item:hover, .geo-suggest-item.active { background:#eef4f9; }
+        .geo-suggest-item i { color:#1a5a8a; font-size:12px; flex-shrink:0; }
+        .geo-suggest-empty { padding:14px 16px; font-size:13px; color:#93a4b5; text-align:right; }
         .search-pin { color:#e63946; font-size:38px; text-shadow:0 2px 8px rgba(0,0,0,0.45); filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }
         .search-pin-wrap { animation:pinFloat 1.4s ease-in-out infinite; }
         @keyframes pinFloat { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
@@ -412,6 +419,7 @@
             <div class="geo-search" id="geoSearch">
                 <input type="text" id="geoSearchInput" placeholder="ابحث عن مكان... مثال: الحرم في مكة، بغداد" />
                 <button id="geoSearchBtn" title="بحث عن المكان"><i class="fas fa-search"></i></button>
+                <div class="geo-suggest" id="geoSuggest"></div>
             </div>
 
         <div class="loader" id="loader">
@@ -638,6 +646,94 @@
     if (geoSearchBtn) geoSearchBtn.addEventListener('click', window.searchPlace);
     const geoSearchInput = document.getElementById('geoSearchInput');
     if (geoSearchInput) geoSearchInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.searchPlace(); });
+
+    // ===== اقتراحات حية أثناء الكتابة (مثل جوجل) =====
+    const geoBox = document.getElementById('geoSearch');
+    const geoSuggest = document.getElementById('geoSuggest');
+    let suggestTimer = null, suggestResults = [], suggestIndex = -1;
+
+    function renderSuggest() {
+        if (!geoSuggest) return;
+        if (!suggestResults.length) { geoSuggest.classList.remove('open'); return; }
+        geoSuggest.innerHTML = suggestResults.map(function(p, i) {
+            return '<div class="geo-suggest-item' + (i === suggestIndex ? ' active' : '') + '" data-i="' + i + '"><i class="fas fa-map-marker-alt"></i><span></span></div>';
+        }).join('');
+        geoSuggest.querySelectorAll('.geo-suggest-item span').forEach(function(sp, i) {
+            sp.textContent = suggestResults[i].display_name;
+        });
+        geoSuggest.querySelectorAll('.geo-suggest-item').forEach(function(el) {
+            el.addEventListener('mousedown', function(ev) { ev.preventDefault(); pickSuggestion(parseInt(this.dataset.i, 10)); });
+            el.addEventListener('mouseenter', function() { suggestIndex = parseInt(this.dataset.i, 10); paintSuggestIndex(); });
+        });
+        geoSuggest.classList.add('open');
+        paintSuggestIndex();
+    }
+
+    function paintSuggestIndex() {
+        if (!geoSuggest) return;
+        geoSuggest.querySelectorAll('.geo-suggest-item').forEach(function(el, i) {
+            el.classList.toggle('active', i === suggestIndex);
+        });
+    }
+
+    async function runSuggest(q) {
+        if (q.length < 1) { suggestResults = []; renderSuggest(); return; }
+        if (suggestTimer) clearTimeout(suggestTimer);
+        suggestTimer = setTimeout(async function() {
+            let out = [];
+            try {
+                const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=ar&q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } });
+                out = await r.json();
+            } catch (_) {}
+            if (out.length < 2 && /حرم|كعبة|مسجد/i.test(q)) {
+                try {
+                    const r2 = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=ar&q=' + encodeURIComponent('مكة المكرمة السعودية'), { headers: { 'Accept': 'application/json' } });
+                    out = r2 && r2.json ? await r2.json() : [];
+                } catch (_) {}
+            }
+            suggestResults = out.filter(Boolean).map(function(p) {
+                return { display_name: p.display_name, lat: parseFloat(p.lat), lon: parseFloat(p.lon) };
+            });
+            suggestIndex = -1;
+            renderSuggest();
+        }, 220);
+    }
+
+    function pickSuggestion(i) {
+        const p = suggestResults[i];
+        if (!p) return;
+        if (geoSearchInput) geoSearchInput.value = p.display_name.split(',')[0];
+        if (searchMarker) map.removeLayer(searchMarker);
+        searchMarker = L.marker([p.lat, p.lon], {
+            icon: L.divIcon({ html: '<div class="search-pin-wrap"><i class="fas fa-map-marker-alt search-pin"></i></div>', className: '', iconSize: [38, 44], iconAnchor: [19, 42] })
+        }).addTo(map);
+        searchMarker.bindPopup('<div style="font-size:13px;line-height:1.6"><b>' + escapeHtml(p.display_name) + '</b></div>');
+        searchMarker.openPopup();
+        map.flyTo([p.lat, p.lon], Math.max(map.getZoom(), 16), { duration: 1.4 });
+        suggestResults = []; renderSuggest(); geoSuggest.classList.remove('open');
+    }
+
+    function closeSuggest() {
+        if (suggestTimer) { clearTimeout(suggestTimer); suggestTimer = null; }
+        suggestResults = [];
+        if (geoSuggest) geoSuggest.classList.remove('open');
+    }
+
+    if (geoSearchInput && geoSuggest) {
+        geoSearchInput.addEventListener('input', function() { runSuggest(this.value.trim()); });
+        geoSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown') { e.preventDefault(); if (!geoSuggest.classList.contains('open')) return; suggestIndex = (suggestIndex + 1) % suggestResults.length; paintSuggestIndex(); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); if (!geoSuggest.classList.contains('open')) return; suggestIndex = (suggestIndex - 1 + suggestResults.length) % suggestResults.length; paintSuggestIndex(); }
+            else if (e.key === 'Enter') {
+                if (suggestIndex >= 0 && suggestResults[suggestIndex]) { e.preventDefault(); pickSuggestion(suggestIndex); }
+                else window.searchPlace();
+            }
+            else if (e.key === 'Escape') closeSuggest();
+        });
+        document.addEventListener('click', function(e) {
+            if (geoBox && !geoBox.contains(e.target)) closeSuggest();
+        });
+    }
 
     // ================================================================
     //  أدوات الرسم والقياس
