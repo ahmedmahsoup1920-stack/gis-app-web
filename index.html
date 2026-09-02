@@ -395,7 +395,8 @@
                     <h4><i class="fas fa-cog"></i> إعدادات البحث</h4>
                 </div>
                 <div style="padding:12px;font-size:12px;color:#555;line-height:1.7">
-                    <p>للبحث عن الأماكن بدون تقطيع، ضع مفتاح Nominatim المجاني (بيسمح بآلاف الطلبات اليوم).</p>
+                    <p>✅ البحث يعمل تلقائياً بمحرك Photon (مجاني، بدون تسجيل، يدعم العربية) — لا شيء مطلوب من الزوار.</p>
+                    <p>مفتاح Nominatim اختياري ويُستخدم فقط كاحتياطي لو احتجت حدود أعلى.</p>
                     <label style="display:block;font-weight:600;margin-bottom:4px;color:#0a2a44">مفتاح Nominatim (اختياري):</label>
                     <input type="text" id="geoKeyInput" placeholder="الصق المفتاح هنا..." style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:6px" />
                     <button type="button" id="geoKeySaveBtn" style="width:100%;padding:9px;background:#1a5a8a;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">حفظ المفتاح</button>
@@ -638,8 +639,34 @@
         return h;
     }
 
+    function hasGeoKey() { try { return !!(localStorage.getItem('geoKey') || '').trim(); } catch (_) { return false; } }
+
+    function normalizePhoto(feats) {
+        return (feats || []).map(function(f) {
+            const p = f.properties || {};
+            const c = (f.geometry && f.geometry.coordinates) || [];
+            const parts = [p.name, p.city, p.state, p.country].filter(Boolean);
+            return {
+                display_name: parts.join('، ') || (p.name || ''),
+                name: p.name || '',
+                lat: parseFloat(c[1]),
+                lon: parseFloat(c[0])
+            };
+        }).filter(function(o) { return !isNaN(o.lat) && !isNaN(o.lon); });
+    }
+
+    async function photonGeocode(query, limit) {
+        const r = await fetch('https://photon.komoot.io/api/?limit=' + limit + '&q=' + encodeURIComponent(query), { headers: nominatimHeaders() });
+        const j = await r.json();
+        return (j && j.features) ? normalizePhoto(j.features) : [];
+    }
+
     async function geocodePlace(query) {
-        const limit = (localStorage.getItem('geoKey') || '').trim() ? 5 : 3;
+        try {
+            const out = await photonGeocode(query, 5);
+            if (out.length) return out;
+        } catch (_) {}
+        const limit = hasGeoKey() ? 5 : 3;
         const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=' + limit + '&accept-language=ar&q=' + encodeURIComponent(query);
         const r = await fetch(url, { headers: nominatimHeaders() });
         return r.json();
@@ -703,36 +730,22 @@
         if (suggestTimer) clearTimeout(suggestTimer);
         suggestTimer = setTimeout(async function() {
             let out = [];
-            const query = q.length === 1 ? (q + ' ' + q) : q;
             try {
-                const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=ar&countrycodes=' + encodeURIComponent(countryHints(q)) + '&q=' + encodeURIComponent(query), { headers: nominatimHeaders() });
-                out = await r.json();
+                out = await photonGeocode(q, 6);
             } catch (_) {}
-            if (!Array.isArray(out)) out = [];
-            if ((out.length < 4 || q.length === 1) && /[مم]/.test(q)) {
+            if (!out.length) {
                 try {
-                    const r2 = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=ar&countrycodes=mk,sa,eg,ae,qa,sa&q=' + encodeURIComponent(query), { headers: nominatimHeaders() });
-                    const o2 = await r2.json();
-                    if (Array.isArray(o2)) out = dedupeSuggest(out.concat(o2));
+                    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&accept-language=ar&q=' + encodeURIComponent(q), { headers: nominatimHeaders() });
+                    const o = await r.json();
+                    out = (Array.isArray(o) ? o : []).map(function(p) {
+                        return { display_name: p.display_name, lat: parseFloat(p.lat), lon: parseFloat(p.lon) };
+                    });
                 } catch (_) {}
             }
-            suggestResults = (out || []).filter(Boolean).map(function(p) {
-                return { display_name: p.display_name, lat: parseFloat(p.lat), lon: parseFloat(p.lon) };
-            }).slice(0, 6);
+            suggestResults = out.filter(function(o) { return !isNaN(o.lat) && !isNaN(o.lon) && o.display_name; }).slice(0, 6);
             suggestIndex = -1;
             renderSuggest();
         }, 600);
-    }
-
-    function countryHints(q) { return ''; }
-
-    function dedupeSuggest(arr) {
-        const seen = {}; const out = [];
-        for (let i = 0; i < arr.length; i++) {
-            const k = arr[i].lat + '_' + arr[i].lon + '_' + (arr[i].display_name || '');
-            if (!seen[k]) { seen[k] = 1; out.push(arr[i]); }
-        }
-        return out;
     }
 
     function pickSuggestion(i) {
