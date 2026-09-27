@@ -6,10 +6,14 @@ on:
       - 'apk-*'
   workflow_dispatch:
 
+env:
+  APP_ID: com.ahmedmahsoup.watergis
+  APP_URL: https://ahmedmahsoup1920-stack.github.io/gis-app-web/
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -19,11 +23,25 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Verify toolchain
+      - name: Prepare Android SDK
         run: |
-          java -version 2>&1
           echo "ANDROID_HOME=${ANDROID_HOME:-unset}"
-          ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}" >/dev/null 2>&1 && echo "android sdk found" || echo "no android sdk"
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0" 2>&1 | tail -5 || true
+          ls "$SDK/platforms" || true
+          ls "$SDK/build-tools" || true
+
+      - name: Ensure Gradle
+        run: |
+          if command -v gradle >/dev/null 2>&1; then
+            echo "using system gradle"; gradle --version | head -8
+          else
+            echo "downloading gradle 8.7"
+            curl -sSL -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.7-bin.zip
+            unzip -q /tmp/gradle.zip -d /opt
+            echo "/opt/gradle-8.7/bin" >> "$GITHUB_PATH"
+          fi
 
       - name: Create keystore
         run: |
@@ -32,40 +50,263 @@ jobs:
             -storepass watergis2026 -keypass watergis2026 \
             -alias watergis -keyalg RSA -keysize 2048 -validity 10950 \
             -dname "CN=Ahmed Mahsoup, OU=Water Networks, O=Water GIS, L=Baghdad, C=IQ"
-          ls -la release.keystore
 
-      - name: Init Bubblewrap
+      - name: Scaffold project
         run: |
-          printf 'n\n%s\nn\nn\nn\nn\nn\n' "$JAVA_HOME" | script -qec "npx --yes @bubblewrap/cli@latest init --manifest https://ahmedmahsoup1920-stack.github.io/gis-app-web/manifest.json --name 'GIS المياه' --packageName com.ahmedmahsoup.watergis --skipCta --directory twa" /dev/null
-          echo "=== twa contents ==="
-          ls -la twa
+          set -e
+          P=androidapp
+          mkdir -p $P/app/src/main/java/com/ahmedmahsoup/watergis
+          mkdir -p $P/app/src/main/res/values
+          mkdir -p $P/app/src/main/res/mipmap-xxhdpi
 
-      - name: Configure signing
-        run: |
-          cd twa
-          printf 'keyAlias=watergis\nstorePassword=watergis2026\nkeyPassword=watergis2026\nstoreFile=../release.keystore\n' > keystore.config
-          cat keystore.config
+          cp icons/icon-192.png $P/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
 
-      - name: Build APK
-        run: |
-          cd twa
-          printf 'n\n' | npx --yes @bubblewrap/cli@latest build
+          cat > $P/settings.gradle <<'EOF'
+          pluginManagement {
+            repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+            repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "GISWater"
+          include ':app'
+          EOF
 
-      - name: Collect output
+          cat > $P/build.gradle <<'EOF'
+          plugins { id 'com.android.application' version '8.1.4' apply false }
+          EOF
+
+          cat > $P/gradle.properties <<'EOF'
+          org.gradle.jvmargs=-Xmx2048m
+          android.useAndroidX=true
+          org.gradle.parallel=true
+          org.gradle.caching=true
+          EOF
+
+          cat > $P/app/build.gradle <<'EOF'
+          plugins { id 'com.android.application' }
+          android {
+            namespace 'com.ahmedmahsoup.watergis'
+            compileSdk 34
+            defaultConfig {
+              applicationId "com.ahmedmahsoup.watergis"
+              minSdk 24
+              targetSdk 34
+              versionCode 1
+              versionName "1.0"
+            }
+            signingConfigs {
+              release {
+                storeFile file("../release.keystore")
+                storePassword "watergis2026"
+                keyAlias "watergis"
+                keyPassword "watergis2026"
+              }
+            }
+            buildTypes {
+              release { signingConfig signingConfigs.release; minifyEnabled false }
+            }
+            lint { checkReleaseBuilds false }
+          }
+          dependencies { }
+          EOF
+
+          cat > $P/app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+            <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+            <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
+            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+            <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+            <application
+                android:label="@string/app_name"
+                android:icon="@mipmap/ic_launcher"
+                android:theme="@style/AppTheme"
+                android:allowBackup="true"
+                android:usesCleartextTraffic="true">
+              <activity
+                  android:name=".MainActivity"
+                  android:exported="true"
+                  android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
+                  android:windowSoftInputMode="adjustResize">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN"/>
+                  <category android:name="android.intent.category.LAUNCHER"/>
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          EOF
+
+          cat > $P/app/src/main/res/values/strings.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+            <string name="app_name">GIS المياه</string>
+          </resources>
+          EOF
+
+          cat > $P/app/src/main/res/values/styles.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+            <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
+              <item name="android:statusBarColor">#0B5D3B</item>
+              <item name="android:navigationBarColor">#0B5D3B</item>
+            </style>
+          </resources>
+          EOF
+
+          echo "scaffold ok"
+          find $P -type f | sort
+
+      - name: Write MainActivity
+        env:
+          URL: ${{ env.APP_URL }}
         run: |
-          cd twa
-          find . -name '*.apk' -o -name '*.aab' > /tmp/found.txt || true
-          echo "--- found ---"
-          cat /tmp/found.txt
-          mkdir -p out
-          while IFS= read -r f; do
-            [ -n "$f" ] && cp -v "$f" out/
-          done < /tmp/found.txt
-          echo "--- out ---"
-          ls -la out/
+          cat > androidapp/app/src/main/java/com/ahmedmahsoup/watergis/MainActivity.java <<EOF
+          package com.ahmedmahsoup.watergis;
+
+          import android.annotation.SuppressLint;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.view.WindowManager;
+          import android.webkit.GeolocationPermissions;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          public class MainActivity extends Activity {
+
+              private static final String START_URL = "$URL";
+              private WebView web;
+              private ValueCallback<Uri[]> filePathCallback;
+
+              @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+                  web = new WebView(this);
+                  setContentView(web);
+
+                  WebSettings s = web.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setDatabaseEnabled(true);
+                  s.setGeolocationEnabled(true);
+                  s.setAllowFileAccess(true);
+                  s.setAllowContentAccess(true);
+                  s.setLoadWithOverviewMode(true);
+                  s.setUseWideViewPort(true);
+                  s.setSupportZoom(false);
+                  s.setBuiltInZoomControls(false);
+                  s.setDisplayZoomControls(false);
+                  s.setMediaPlaybackRequiresUserGesture(false);
+                  s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+                  s.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  s.setJavaScriptCanOpenWindowsAutomatically(true);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      s.setSafeBrowsingEnabled(false);
+                  }
+
+                  web.setOverScrollMode(View.OVER_SCROLL_NEVER);
+                  web.setWebViewClient(new WebViewClient());
+                  web.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback cb) {
+                          cb.invoke(origin, true, false);
+                      }
+
+                      @Override
+                      public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> cb, FileChooserParams params) {
+                          if (filePathCallback != null) {
+                              filePathCallback.onReceiveValue(null);
+                          }
+                          filePathCallback = cb;
+                          Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                          i.addCategory(Intent.CATEGORY_OPENABLE);
+                          i.setType("*/*");
+                          try {
+                              startActivityForResult(Intent.createChooser(i, "اختر ملف"), 1);
+                          } catch (Exception e) {
+                              filePathCallback = null;
+                          }
+                          return true;
+                      }
+                  });
+
+                  if (savedInstanceState != null) {
+                      web.restoreState(savedInstanceState);
+                  } else {
+                      web.loadUrl(START_URL);
+                  }
+              }
+
+              @Override
+              protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode == 1 && filePathCallback != null) {
+                      Uri[] result = null;
+                      if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+                          result = new Uri[]{ data.getData() };
+                      }
+                      filePathCallback.onReceiveValue(result);
+                      filePathCallback = null;
+                  }
+              }
+
+              @Override
+              protected void onSaveInstanceState(Bundle outState) {
+                  super.onSaveInstanceState(outState);
+                  if (web != null) web.saveState(outState);
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (web != null && web.canGoBack()) {
+                      web.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          EOF
+          echo "MainActivity written"
+
+      - name: Build release APK
+        run: |
+          cd androidapp
+          gradle --no-daemon assembleRelease 2>&1 | tail -40
+
+      - name: Collect APK
+        run: |
+          mkdir -p dist
+          find androidapp -name '*.apk' | tee /tmp/apks.txt
+          if [ -s /tmp/apks.txt ]; then
+            while IFS= read -r f; do cp -v "$f" dist/; done < /tmp/apks.txt
+          fi
+          ls -la dist/
+
+      - name: Verify signature
+        run: |
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          for f in dist/*.apk; do
+            echo "--- $f ---"
+            "$SDK/build-tools/34.0.0/aapt" dump badging "$f" 2>/dev/null | head -3 || true
+            "$SDK/build-tools/34.0.0/apksigner" verify --print-certs "$f" 2>&1 | head -6 || true
+          done
 
       - uses: actions/upload-artifact@v4
         with:
           name: gis-apk
-          path: twa/out/
+          path: dist/
           if-no-files-found: error
