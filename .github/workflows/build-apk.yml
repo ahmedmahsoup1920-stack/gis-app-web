@@ -36,7 +36,7 @@ jobs:
 
       - name: Init Bubblewrap
         run: |
-          printf 'n\nn\nn\n' | npx --yes @bubblewrap/cli@latest init \
+          printf 'n\n%s\nn\nn\nn\n' "$JAVA_HOME" | npx --yes @bubblewrap/cli@latest init \
             --manifest "https://ahmedmahsoup1920-stack.github.io/gis-app-web/manifest.json" \
             --name "GIS المياه" \
             --packageName "com.ahmedmahsoup.watergis" \
