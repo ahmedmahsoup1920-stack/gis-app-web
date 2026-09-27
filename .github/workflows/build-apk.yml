@@ -36,12 +36,7 @@ jobs:
 
       - name: Init Bubblewrap
         run: |
-          printf 'n\n%s\nn\nn\nn\n' "$JAVA_HOME" | npx --yes @bubblewrap/cli@latest init \
-            --manifest "https://ahmedmahsoup1920-stack.github.io/gis-app-web/manifest.json" \
-            --name "GIS المياه" \
-            --packageName "com.ahmedmahsoup.watergis" \
-            --skipCta \
-            --directory twa
+          printf 'n\n%s\nn\nn\nn\nn\nn\n' "$JAVA_HOME" | script -qec "npx --yes @bubblewrap/cli@latest init --manifest https://ahmedmahsoup1920-stack.github.io/gis-app-web/manifest.json --name 'GIS المياه' --packageName com.ahmedmahsoup.watergis --skipCta --directory twa" /dev/null
           echo "=== twa contents ==="
           ls -la twa
 
