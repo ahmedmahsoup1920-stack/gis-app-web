@@ -34,14 +34,10 @@ jobs:
 
       - name: Ensure Gradle
         run: |
-          if command -v gradle >/dev/null 2>&1; then
-            echo "using system gradle"; gradle --version | head -8
-          else
-            echo "downloading gradle 8.7"
-            curl -sSL -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.7-bin.zip
-            unzip -q /tmp/gradle.zip -d /opt
-            echo "/opt/gradle-8.7/bin" >> "$GITHUB_PATH"
-          fi
+          echo "installing Gradle 8.7 (system gradle is 9.x which AGP 8.x rejects)"
+          curl -sSL -o /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -q -o /tmp/gradle.zip -d /opt
+          /opt/gradle-8.7/bin/gradle --version | head -8
 
       - name: Create keystore
         run: |
@@ -73,7 +69,7 @@ jobs:
           EOF
 
           cat > $P/build.gradle <<'EOF'
-          plugins { id 'com.android.application' version '8.1.4' apply false }
+          plugins { id 'com.android.application' version '8.4.2' apply false }
           EOF
 
           cat > $P/gradle.properties <<'EOF'
@@ -285,7 +281,7 @@ jobs:
       - name: Build release APK
         run: |
           cd androidapp
-          gradle --no-daemon assembleRelease 2>&1 | tail -40
+          /opt/gradle-8.7/bin/gradle --no-daemon assembleRelease 2>&1 | tail -50
 
       - name: Collect APK
         run: |
