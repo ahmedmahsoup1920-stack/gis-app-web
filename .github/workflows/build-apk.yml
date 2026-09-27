@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v4
@@ -18,6 +19,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Verify toolchain
+        run: |
+          java -version 2>&1
+          echo "ANDROID_HOME=${ANDROID_HOME:-unset}"
+          ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}" >/dev/null 2>&1 && echo "android sdk found" || echo "no android sdk"
+
       - name: Create keystore
         run: |
           keytool -genkeypair -v \
@@ -25,17 +32,20 @@ jobs:
             -storepass watergis2026 -keypass watergis2026 \
             -alias watergis -keyalg RSA -keysize 2048 -validity 10950 \
             -dname "CN=Ahmed Mahsoup, OU=Water Networks, O=Water GIS, L=Baghdad, C=IQ"
+          ls -la release.keystore
 
       - name: Init Bubblewrap
         run: |
-          yes | npx --yes @bubblewrap/cli@latest init \
+          printf 'n\nn\nn\n' | npx --yes @bubblewrap/cli@latest init \
             --manifest "https://ahmedmahsoup1920-stack.github.io/gis-app-web/manifest.json" \
             --name "GIS المياه" \
             --packageName "com.ahmedmahsoup.watergis" \
             --skipCta \
             --directory twa
+          echo "=== twa contents ==="
+          ls -la twa
 
-      - name: Write keystore config
+      - name: Configure signing
         run: |
           cd twa
           printf 'keyAlias=watergis\nstorePassword=watergis2026\nkeyPassword=watergis2026\nstoreFile=../release.keystore\n' > keystore.config
@@ -44,16 +54,19 @@ jobs:
       - name: Build APK
         run: |
           cd twa
-          yes | npx --yes @bubblewrap/cli@latest build
+          printf 'n\n' | npx --yes @bubblewrap/cli@latest build
 
       - name: Collect output
         run: |
           cd twa
-          find . -name "*.apk" -o -name "*.aab" | tee /tmp/found.txt
+          find . -name '*.apk' -o -name '*.aab' > /tmp/found.txt || true
+          echo "--- found ---"
+          cat /tmp/found.txt
           mkdir -p out
-          for f in $(cat /tmp/found.txt); do
-            cp -v "$f" out/ 2>/dev/null || true
-          done
+          while IFS= read -r f; do
+            [ -n "$f" ] && cp -v "$f" out/
+          done < /tmp/found.txt
+          echo "--- out ---"
           ls -la out/
 
       - uses: actions/upload-artifact@v4
