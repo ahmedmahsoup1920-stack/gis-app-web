@@ -2,10 +2,22 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+
+    <!-- ===== PWA: تحويل التطبيق إلى موبايل أبلكيشن ===== -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0a2a44" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="GIS المياه" />
+    <meta name="application-name" content="GIS المياه" />
+    <meta name="description" content="تطبيق ويب لإدارة شبكات المياه: طبقات جغرافية، رفع ملفات، رسم، قياسات، وتصدير." />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
     <title>ahmed mahsoup - نظام المعلومات الجغرافية - المياه</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.12.0/maplibre-gl.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
@@ -3353,6 +3365,80 @@
             document.getElementById('loginPass').value = '';
         }
     });
+</script>
+
+<!-- ===== PWA: تسجيل Service Worker + زر التثبيت ===== -->
+<script>
+    (function () {
+        if (!('serviceWorker' in navigator)) return;
+
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('sw.js')
+                .then(function (reg) {
+                    console.log('✅ Service Worker مُسجَّل — التطبيق جاهز للعمل بدون إنترنت');
+
+                    // فحص التحديثات كل 6 ساعات
+                    setInterval(function () { reg.update(); }, 6 * 60 * 60 * 1000);
+
+                    // لو فيه نسخة جديدة جاهزة، حدّث مباشرة
+                    reg.addEventListener('updatefound', function () {
+                        var nw = reg.installing;
+                        if (!nw) return;
+                        nw.addEventListener('statechange', function () {
+                            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('🆕 يوجد تحديث جديد — أعد فتح التطبيق لتطبيقه');
+                            }
+                        });
+                    });
+                })
+                .catch(function (e) { console.warn('تعذّر تسجيل Service Worker:', e); });
+        });
+
+        // زر "تثبيت التطبيق" — يظهر عند دعم المتصفح
+        var deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            deferredPrompt = e;
+            var btn = document.createElement('button');
+            btn.id = 'installAppBtn';
+            btn.title = 'تثبيت التطبيق على جهازك';
+            btn.innerHTML = '<i class="fas fa-download"></i> <span class="btn-text">تثبيت</span>';
+            btn.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:9999;' +
+                'background:linear-gradient(135deg,#0a2a44,#1a5a8a);color:#fff;border:none;' +
+                'border-radius:10px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer;' +
+                'font-family:Tajawal,sans-serif;box-shadow:0 6px 18px rgba(10,42,68,.35);' +
+                'display:flex;align-items:center;gap:6px;';
+            btn.addEventListener('click', function () {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(function (r) {
+                    if (r.outcome === 'accepted') btn.remove();
+                    deferredPrompt = null;
+                });
+            });
+            document.body.appendChild(btn);
+        });
+
+        // على iOS: لا يدعم beforeinstallprompt — نعرضinstruction
+        var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        var standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                         window.navigator.standalone === true;
+        if (isIOS && !standalone) {
+            window.addEventListener('load', function () {
+                setTimeout(function () {
+                    var tip = document.createElement('div');
+                    tip.style.cssText = 'position:fixed;bottom:16px;left:16px;right:16px;z-index:9999;' +
+                        'background:#0a2a44;color:#fff;border-radius:10px;padding:12px 14px;' +
+                        'font-size:12.5px;line-height:1.7;font-family:Tajawal,sans-serif;' +
+                        'box-shadow:0 6px 18px rgba(0,0,0,.35);';
+                    tip.innerHTML = '<b>لتثبيت التطبيق على iPhone:</b><br>' +
+                        'اضغط زر المشاركة <b>⬆︎</b> ثم اختر <b>Add to Home Screen</b> (إضافة إلى الشاشة الرئيسية).';
+                    document.body.appendChild(tip);
+                    setTimeout(function () { tip.remove(); }, 12000);
+                }, 2500);
+            });
+        }
+    })();
 </script>
 
 </body>
