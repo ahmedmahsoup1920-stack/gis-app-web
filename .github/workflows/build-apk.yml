@@ -93,7 +93,7 @@ jobs:
             }
             signingConfigs {
               release {
-                storeFile file("../release.keystore")
+                storeFile file("../../release.keystore")
                 storePassword "watergis2026"
                 keyAlias "watergis"
                 keyPassword "watergis2026"
