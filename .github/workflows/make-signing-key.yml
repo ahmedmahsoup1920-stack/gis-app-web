@@ -1,0 +1,71 @@
+name: Create signing key (ONE TIME)
+
+# ⚠️ ده بيتنفّذ مرة واحدة بس. بعد ما يولّد المفتاح وتحوّله لـ secret، متشغّلوش تاني —
+# تشغيله تاني هيبني مفتاح مختلف ويخلي التطبيق القديم مش قابل للتحديث.
+# وكمان في Guard: لو الـ secret موجود، الـ run هيفشل فورًا.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "اكتب CREATE-ece to confirm (safety lock)"
+        required: true
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  STORE_PASS: watergis2026
+  KEY_ALIAS: watergis
+
+jobs:
+  make-key:
+    if: github.event.inputs.confirm == 'CREATE-ece'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Refuse to run if a signing key already exists
+        env:
+          EXISTING: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$EXISTING" ]; then
+            echo "::error::secret ANDROID_KEYSTORE_BASE64 is already set. Delete it first if you really want to rotate the key (this breaks updates for already-installed apps)."
+            exit 1
+          fi
+          echo "no existing key - safe to generate"
+
+      - name: Generate release keystore
+        run: |
+          set -e
+          keytool -genkeypair -v \
+            -keystore release.keystore \
+            -storepass "$STORE_PASS" -keypass "$STORE_PASS" \
+            -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10950 \
+            -dname "CN=Ahmed Mahsoup, OU=Water Networks, O=Water GIS, L=Baghdad, C=IQ"
+          keytool -list -v -keystore release.keystore -storepass "$STORE_PASS" | head -20
+
+      - name: Write key material as base64 (for pasting into repo secrets)
+        run: |
+          set -e
+          base64 -w 0 release.keystore > keystore.b64
+          wc -c keystore.b64
+          cp release.keystore signing-key-backup.keystore
+          echo "### key fingerprint" >> "$GITHUB_STEP_SUMMARY"
+          keytool -list -v -keystore release.keystore -storepass "$STORE_PASS" \
+            | grep -E 'Alias name|SHA1:|SHA256:|Valid from' >> "$GITHUB_STEP_SUMMARY" || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signing-key-material
+          path: |
+            keystore.b64
+            signing-key-backup.keystore
+          if-no-files-found: error
+          retention-days: 1
