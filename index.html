@@ -2289,16 +2289,19 @@
         document.getElementById('dataTableModal').classList.add('active');
     };
 
-    function renderDataTable(q) {
+    function renderDataTable(rawQ) {
         const dt = window.__dt || { feats: [], cols: [] };
         const cols = dt.cols, feats = dt.feats;
-        q = arNorm(q);
+        const raw = String(rawQ == null ? '' : rawQ).trim();
+        const q = arNorm(raw);
+        const gtypeLabels = { point: 'نقطة', line: 'خط', polygon: 'مضلع' };
         let filtered = feats;
         if (q) filtered = feats.filter(f => {
             const p = f.properties || {};
+            // البحث يشمل النوع الهندسي أيضًا (نقطة/خط/مضلع)
+            if ((gtypeLabels[geomTypeOf(f)] || '').includes(q)) return true;
             return cols.some(k => k !== '__gtype' && arNorm(p[k]).includes(q));
         });
-        const gtypeLabels = { point: 'نقطة', line: 'خط', polygon: 'مضلع' };
         const MAX_ROWS = 2000;
         const shown = Math.min(filtered.length, MAX_ROWS);
         const head = cols.map(k => `<th>${escapeHtml(k === '__gtype' ? 'النوع الهندسي' : k)}</th>`).join('');
@@ -2312,6 +2315,16 @@
             }).join('')}</tr>`;
         }
         const note = filtered.length > MAX_ROWS ? `<div style="padding:6px 10px;background:#fff7e6;color:#8a6d1a;font-size:11.5px;">يوجد ${filtered.length} سجل — يتم عرض أول ${MAX_ROWS} فقط، استخدم البحث للتصفية.</div>` : '';
+
+        // العنوان لازم يتحدّث مع البحث، وإلا المستخدم يشوف عدد السجلات الكلي والنتائج مخالفة
+        const sum = document.getElementById('dtSummary');
+        if (sum) {
+            const nCols = cols.length - 1;
+            sum.textContent = raw
+                ? `نتائج البحث عن «${raw}»: ${filtered.length} من ${feats.length} سجل · عدد الأعمدة: ${nCols}`
+                : `عدد السجلات: ${feats.length} · عدد الأعمدة: ${nCols}`;
+        }
+
         document.getElementById('dtWrap').innerHTML = note + `<table><thead><tr>${head}</tr></thead><tbody>${body || `<tr><td colspan="${cols.length}" style="text-align:center;color:#999;padding:20px;">لا توجد نتائج مطابقة</td></tr>`}</tbody></table>`;
     }
 
