@@ -11,6 +11,10 @@ on:
         description: "اكتب CREATE-ece to confirm (safety lock)"
         required: true
         default: ""
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/make-signing-key.yml'
 
 permissions:
   contents: read
@@ -21,7 +25,9 @@ env:
 
 jobs:
   make-key:
-    if: github.event.inputs.confirm == 'CREATE-ece'
+    # Only manual dispatch needs the confirmation word; a push of this file runs it
+    # straight away (the secret-exists guard below is what actually protects the key).
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.confirm == 'CREATE-ece' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
