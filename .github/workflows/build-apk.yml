@@ -57,10 +57,11 @@ jobs:
         env:
           KEY_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           set -e
           if [ -z "$KEY_B64" ]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 is not set. Run the 'Create signing key (ONE TIME)' workflow first, then add the secret."
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret is not set. Run the 'Create signing key (ONE TIME)' workflow first, then add the 3 secrets it printed."
             exit 1
           fi
           echo "$KEY_B64" | base64 -d > release.keystore
