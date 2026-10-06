@@ -186,7 +186,7 @@ jobs:
               <!-- gives the installer a safe URI to the downloaded APK -->
               <provider
                   android:name="androidx.core.content.FileProvider"
-                  android:authorities="${APP_ID}.fileprovider"
+                  android:authorities="${applicationId}.fileprovider"
                   android:exported="false"
                   android:grantUriPermissions="true">
                 <meta-data
@@ -614,6 +614,7 @@ jobs:
 
       - name: Build release APK
         run: |
+          set -eo pipefail
           cd androidapp
           /opt/gradle-8.7/bin/gradle --no-daemon assembleRelease 2>&1 | tail -40
 
