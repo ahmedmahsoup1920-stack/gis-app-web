@@ -6,6 +6,9 @@ on:
     paths:
       - '.github/workflows/build-apk.yml'
       - 'app-android/**'
+      - 'androidapp/**'
+  schedule:
+    - cron: '17 4 * * 1'
   workflow_dispatch:
     inputs:
       version_code:
@@ -14,6 +17,11 @@ on:
         default: ''
       skip_publish:
         description: 'true = build only, do NOT commit the APK to releases/'
+        type: boolean
+        required: false
+        default: false
+      force:
+        description: 'true = bump & publish even if the app code did not change'
         type: boolean
         required: false
         default: false
@@ -27,7 +35,47 @@ env:
   RELEASES_DIR: releases
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      changed: ${{ steps.changes.outputs.changed }}
+      hash: ${{ steps.changes.outputs.hash }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect app-code changes
+        id: changes
+        env:
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          {
+            sha256sum .github/workflows/build-apk.yml
+            for d in androidapp app-android; do
+              if [ -d "$d" ]; then find "$d" -type f | sort | xargs -r sha256sum; fi
+            done
+          } | sha256sum | cut -d' ' -f1 > /tmp/hash.now
+          NEW=$(cat /tmp/hash.now)
+          OLD=""
+          if [ -f "$RELEASES_DIR/version.json" ]; then
+            OLD=$(grep '"contentHash"' "$RELEASES_DIR/version.json" | grep -o '[0-9a-f]\{64\}' | head -1 || true)
+          fi
+          OLD=${OLD:-}
+          CHANGED=true
+          if [ "$FORCE" != "true" ] && [ -n "$OLD" ] && [ "$OLD" = "$NEW" ]; then
+            CHANGED=false
+          fi
+          echo "inputHash=$NEW lastPublished=${OLD:-none} changed=$CHANGED force=${FORCE:-false}"
+          echo "hash=$NEW" >> "$GITHUB_OUTPUT"
+          echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
+          if [ "$CHANGED" != "true" ]; then
+            echo "::notice::No APK-affecting change detected - skipping build and publish."
+          fi
+
   build:
+    needs: detect
+    if: ${{ needs.detect.outputs.changed == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
@@ -646,6 +694,8 @@ jobs:
       # Publish the APK + manifest so the installed app can discover the new build.
       - name: Publish releases/version.json + releases/gis.apk
         if: ${{ !inputs.skip_publish }}
+        env:
+          INPUT_HASH: ${{ needs.detect.outputs.hash }}
         run: |
           set -e
           mkdir -p "$RELEASES_DIR"
@@ -657,8 +707,9 @@ jobs:
             "url": "${{ env.APP_URL }}releases/gis.apk",
             "sha256": "$SHA",
             "size": $SIZE,
+            "contentHash": "$INPUT_HASH",
             "publishedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "notes": "نسخة محدّثة: إصلاح جدول البيانات، تحكم في إظهار الطبقات، بحث عربي، وتخطيط موبايل."
+            "notes": "تحديث تلقائي - الإصدار ${{ steps.ver.outputs.version_code }}."
           }
           EOF
           cat "$RELEASES_DIR/version.json"
