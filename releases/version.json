@@ -1,10 +1,10 @@
 {
-  "versionCode": 4,
-  "versionName": "1.4",
+  "versionCode": 5,
+  "versionName": "1.5",
   "url": "https://ahmedmahsoup1920-stack.github.io/gis-app-web/releases/gis.apk",
-  "sha256": "e598158b2d3d11243f0154def253741696bb2e137f6ca25a03c97b07ea1d77d5",
-  "size": 1527797,
-  "contentHash": "799baf3d8addf8231d9c818976bc5b821cb4a224c2fc6317ef7e51fa3dd45963",
-  "publishedAt": "2026-10-06T08:32:26Z",
-  "notes": "تحديث تلقائي - الإصدار 4."
+  "sha256": "c5d1d7fa936d73b7f776761409d6966ed52bb23688188dad7ecf23d7014d1cf7",
+  "size": 1527789,
+  "contentHash": "38d098b4242ff426093696bb074cf27a637133a2da1600481febf0ff1538498e",
+  "publishedAt": "2026-10-06T08:38:01Z",
+  "notes": "تحديث تلقائي - الإصدار 5."
 }
