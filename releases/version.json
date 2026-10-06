@@ -1,9 +1,10 @@
 {
-  "versionCode": 2,
-  "versionName": "1.2",
+  "versionCode": 3,
+  "versionName": "1.3",
   "url": "https://ahmedmahsoup1920-stack.github.io/gis-app-web/releases/gis.apk",
-  "sha256": "4ced0ed5f704b41e21122cd3a05194a6c07e6deef6a5e370f3d47ab72e30c7af",
-  "size": 1527801,
-  "publishedAt": "2026-10-06T08:20:52Z",
-  "notes": "نسخة محدّثة: إصلاح جدول البيانات، تحكم في إظهار الطبقات، بحث عربي، وتخطيط موبايل."
+  "sha256": "e32286509a01f2149bf0b1fdce54a7fbea451b80a3a667858127313e3538df02",
+  "size": 1527797,
+  "contentHash": "799baf3d8addf8231d9c818976bc5b821cb4a224c2fc6317ef7e51fa3dd45963",
+  "publishedAt": "2026-10-06T08:28:45Z",
+  "notes": "تحديث تلقائي - الإصدار 3."
 }
