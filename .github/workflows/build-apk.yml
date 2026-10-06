@@ -443,7 +443,7 @@ jobs:
                           + "النسخة الحالية: " + mine + "\\n"
                           + "النسخة الجديدة: " + latest + "\\n";
                   if (notes != null && notes.length() > 0) msg += "\\n" + notes + "\\n";
-                  msg += "\\nتحب تنزّلها دلوقتي؟ (حوالي 20 كيلوبايت)";
+                  msg += "\\nتحب تنزّلها دلوقتي؟";
 
                   new AlertDialog.Builder(this)
                       .setTitle("تحديث التطبيق")
@@ -501,7 +501,7 @@ jobs:
                                   // Step 2: ask again BEFORE handing it to the installer.
                                   new AlertDialog.Builder(MainActivity.this)
                                           .setTitle("التحديث جاهز")
-                                          .setMessage("تم تنزيل النسخة " + latest + " (" + Math.round(file.length() / 1024.0) + " كيلوبايت).\\n\\nتتأكد عايز تثبتها دلوقتي؟")
+                                          .setMessage("تم تنزيل النسخة " + latest + " (" + humanSize(file.length()) + ").\\n\\nتتأكد عايز تثبتها دلوقتي؟")
                                           .setPositiveButton("ثبّت الآن", (d, w) -> installApk(file))
                                           .setNegativeButton("لأ", null)
                                           .show();
@@ -548,6 +548,13 @@ jobs:
 
               private void toast(String m) {
                   new AlertDialog.Builder(this).setMessage(m).setPositiveButton("تمام", null).show();
+              }
+
+              private static String humanSize(long bytes) {
+                  if (bytes >= 1024L * 1024L) {
+                      return String.format(java.util.Locale.US, "%.1f ميجابايت", bytes / 1048576.0);
+                  }
+                  return Math.round(bytes / 1024.0) + " كيلوبايت";
               }
 
               private static String sha256(File f) {
