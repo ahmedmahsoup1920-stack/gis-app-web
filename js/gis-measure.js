@@ -75,7 +75,7 @@
             ctx.map.on('click', onClick);
 
             function totals() {
-                var list = window.measurements || [];
+                var list = (typeof measurements !== 'undefined' ? measurements : []);
                 var sumDist = 0, sumArea = 0;
                 var rows = list.map(function (m) {
                     var val = '';
