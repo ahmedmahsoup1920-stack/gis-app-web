@@ -16,7 +16,7 @@
     function targetFeatures(scope) {
         var out = [];
         if (scope === 'file' || scope === 'all') {
-            var gl = window.geoLayer;
+            var gl = (typeof geoLayer !== 'undefined' ? geoLayer : null);
             if (gl && gl.eachLayer) {
                 gl.eachLayer(function (l) {
                     if (l.feature) { out.push({ f: l.feature, layer: l, source: 'file', name: (l.feature.properties && l.feature.properties.name) || '' }); }
@@ -24,7 +24,7 @@
             }
         }
         if (scope === 'custom' || scope === 'all') {
-            (window.customFeaturesData || []).forEach(function (cf) {
+            ((typeof customFeaturesData !== 'undefined' ? customFeaturesData : null) || []).forEach(function (cf) {
                 if (cf.geojson && cf.geojson.geometry) out.push({ f: cf.geojson, layer: cf.layer, source: 'custom', name: cf.name || '' });
             });
         }
