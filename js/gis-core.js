@@ -289,6 +289,8 @@
         },
 
         notify: notify,
+        el: el,
+        escapeHtml: escapeHtml,
         bootstrap: function (refs) { REFS = refs || {}; GIS.refs = REFS; },
         start: start,
         openModule: openModule,
