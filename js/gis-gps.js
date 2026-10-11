@@ -16,18 +16,18 @@
 
     function referenceVertices(excludeGeojson) {
         var out = [];
-        var gl = window.geoLayer;
+        var gl = (typeof geoLayer !== 'undefined' ? geoLayer : null);
         if (gl && gl.eachLayer) {
             gl.eachLayer(function (l) {
                 if (!l.feature) { return; }
                 window.featureVertices(l.feature).forEach(function (c) { out.push([c[1], c[0]]); });
             });
         }
-        (window.customFeaturesData || []).forEach(function (cf) {
+        ((typeof customFeaturesData !== 'undefined' ? customFeaturesData : null) || []).forEach(function (cf) {
             if (cf.geojson === excludeGeojson) { return; }
             window.featureVertices(cf.geojson).forEach(function (c) { out.push([c[1], c[0]]); });
         });
-        (window.locations || []).forEach(function (loc) { out.push([Number(loc.lat), Number(loc.lng)]); });
+        (typeof locations !== 'undefined' ? locations : []).forEach(function (loc) { out.push([Number(loc.lat), Number(loc.lng)]); });
         return out;
     }
 
@@ -158,7 +158,7 @@
             });
 
             function snapSelectedFeature() {
-                var cfs = (window.customFeaturesData || []).filter(function (cf) { return cf.geojson && (U.geomType(cf.geojson) === 'line' || U.geomType(cf.geojson) === 'polygon'); });
+                var cfs = ((typeof customFeaturesData !== 'undefined' ? customFeaturesData : null) || []).filter(function (cf) { return cf.geojson && (U.geomType(cf.geojson) === 'line' || U.geomType(cf.geojson) === 'polygon'); });
                 if (!cfs.length) { ctx.notify('لا توجد عناصر خطية/مضلعية مخصّصة', 'warn'); return; }
                 var names = cfs.map(function (cf, i) { return (i + 1) + '. ' + cf.name; }).join('\n');
                 var pick = prompt('اختر رقم العنصر لالتقاط رؤوسه:\n' + names, '1');
