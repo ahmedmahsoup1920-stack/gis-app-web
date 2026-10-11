@@ -20,21 +20,22 @@
             root.innerHTML =
                 '<div data-f="scope" style="margin-bottom:8px"></div>' +
                 '<div data-f="field" style="margin-bottom:8px"></div>' +
-                '<button type="button" data-act="run" style="' + U.btnStyle + '"><i class="fas fa-chart-simple"></i> توليد المخطط</button>' +
+                '<button type="button" data-act="run" style="' + U.btnStyle + '"><i class="fas fa-chart-simple"></i> Generate Chart</button>' +
                 '<div data-f="out" style="margin-top:12px"></div>';
 
             var scopeSel = U.el('select', { style: U.selectStyle }, U.options([
-                { value: 'all', label: 'كل العناصر', sel: true },
-                { value: 'file', label: 'الملف الحالي' },
-                { value: 'custom', label: 'العناصر المخصصة' }
+                { value: 'active', label: 'Active Layer / Selected Feature (User Drawings)', sel: true },
+                { value: 'drawings', label: 'User Drawings Only' },
+                { value: 'all', label: 'All Layers' },
+                { value: 'file', label: 'Current File Layer' }
             ]));
             var sw = root.querySelector('[data-f="scope"]');
-            sw.innerHTML = '<label style="font-size:11.5px;color:var(--txt-dim,#94a3b8);display:block;margin-bottom:4px;">مصدر البيانات</label>';
+            sw.innerHTML = '<label style="font-size:11.5px;color:var(--txt-dim,#94a3b8);display:block;margin-bottom:4px;">Source Layer</label>';
             sw.appendChild(scopeSel);
 
             var fieldSel = U.el('select', { style: U.selectStyle });
             var fw = root.querySelector('[data-f="field"]');
-            fw.innerHTML = '<label style="font-size:11.5px;color:var(--txt-dim,#94a3b8);display:block;margin-bottom:4px;">الحقل</label>';
+            fw.innerHTML = '<label style="font-size:11.5px;color:var(--txt-dim,#94a3b8);display:block;margin-bottom:4px;">Attribute Field</label>';
             fw.appendChild(fieldSel);
             var out = root.querySelector('[data-f="out"]');
 
@@ -44,7 +45,7 @@
                 var all = U.allFields(fs);
                 var nums = U.numericFields(fs);
                 fieldSel.innerHTML = all.map(function (k) {
-                    return '<option value="' + ctx.escapeHtml(k) + '">' + ctx.escapeHtml(k) + (nums.indexOf(k) >= 0 ? ' (رقمي)' : '') + '</option>';
+                    return '<option value="' + ctx.escapeHtml(k) + '">' + ctx.escapeHtml(k) + (nums.indexOf(k) >= 0 ? ' (numeric)' : '') + '</option>';
                 }).join('') || '<option value="">— لا حقول —</option>';
             }
             refreshFields();
@@ -63,7 +64,10 @@
 
             function run() {
                 var fs = feats();
-                if (!fs.length) { ctx.notify('لا توجد بيانات', 'warn'); return; }
+                if (!fs.length) {
+                    ctx.notify(scopeSel.value === 'active' ? 'Select a feature on the map to analyze' : 'No data found in the selected source', 'warn');
+                    return;
+                }
                 var field = fieldSel.value;
                 var nums = U.numericFields(fs);
                 var isNum = nums.indexOf(field) >= 0;
