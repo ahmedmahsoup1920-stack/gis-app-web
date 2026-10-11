@@ -45,7 +45,7 @@
             var out = root.querySelector('[data-f="out"]');
 
             function fillSelect() {
-                var list = (window.customFeaturesData || []);
+                var list = ((typeof customFeaturesData !== 'undefined' ? customFeaturesData : null) || []);
                 sel.innerHTML = '<option value="">— اختر عنصرًا —</option>' + list.map(function (c) {
                     return '<option value="' + c.id + '">' + ctx.escapeHtml(c.name + ' (' + c.kind + ')') + '</option>';
                 }).join('');
@@ -163,7 +163,7 @@
 
             function startEdit() {
                 var id = Number(sel.value);
-                cf = (window.customFeaturesData || []).find(function (c) { return c.id === id; }) || null;
+                cf = ((typeof customFeaturesData !== 'undefined' ? customFeaturesData : null) || []).find(function (c) { return c.id === id; }) || null;
                 if (!cf) { clearMarkers(); out.innerHTML = ''; return; }
                 try { if (typeof stopCustomDraw === 'function') { stopCustomDraw(); } } catch (e) {}
                 try { if (typeof stopMeasuring === 'function') { stopMeasuring(); } } catch (e) {}
