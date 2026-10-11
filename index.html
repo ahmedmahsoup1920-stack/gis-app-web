@@ -183,6 +183,17 @@
         .attr-badge.poly { background:#e9f7f4; color:#1f7a6a; }
         .attr-edit { width:100%; min-width:80px; padding:4px 6px; border:1px solid #d7e3ee; border-radius:6px; font-size:12px; font-family:inherit; background:#fff; box-sizing:border-box; }
         .attr-edit:focus { outline:none; border-color:#0e8f8a; box-shadow:0 0 0 2px rgba(14,143,138,0.15); }
+.dt-filterbar { display:flex; flex-direction:column; gap:7px; margin:10px 0; }
+.dt-filterbar .data-table-search { margin:0; }
+.dt-fb-row { display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+.dt-field-sel, .dt-field-val { padding:8px 10px; border:1px solid #d7e3ee; border-radius:8px; font-size:13px; font-family:inherit; box-sizing:border-box; background:#fff; }
+.dt-field-sel { flex:0 0 auto; min-width:150px; }
+.dt-field-val { flex:1 1 140px; min-width:110px; }
+.attr-btn.addcol { background:#0e8f8a; color:#fff; }
+.attr-btn.clearf { background:#b45309; color:#fff; }
+.fp-actions { padding:8px 10px; border-top:1px solid rgba(148,163,184,.2); }
+.fp-edit-btn { width:100%; padding:9px; border:none; border-radius:8px; background:#0e8f8a; color:#fff; font-family:inherit; font-weight:700; font-size:12.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; }
+.fp-edit-btn:hover { filter:brightness(1.08); }
         .attr-num { width:118px; direction:ltr; text-align:left; font-variant-numeric:tabular-nums; }
         .attr-ro { color:#555; font-variant-numeric:tabular-nums; direction:ltr; display:inline-block; }
         .attr-cap { font-size:11px; color:#8a9aa8; font-weight:400; }
@@ -735,7 +746,7 @@
     <div id="sideDock" class="hidden" aria-label="شريط الأدوات السريع">
         <button type="button" data-side="expand" title="فتح اللوحة"><i class="fas fa-chevron-right"></i></button>
         <button type="button" data-side="locations" title="المواقع"><i class="fas fa-map-pin"></i></button>
-        <button type="button" data-side="draw" title="أدوات الرسم"><i class="fas fa-pen"></i></button>
+        <button type="button" data-side="draw" title="Drawing Tools"><i class="fas fa-pen"></i></button>
         <button type="button" data-side="files" title="الملفات والرفع"><i class="fas fa-folder-open"></i></button>
         <button type="button" data-side="dashboard" title="لوحة التحليلات"><i class="fas fa-chart-line"></i></button>
         <button type="button" data-side="settings" title="الإعدادات"><i class="fas fa-cog"></i></button>
@@ -749,7 +760,7 @@
         </div>
         <div class="tabs">
             <button class="active" data-tab="locations"><i class="fas fa-map-pin"></i> المواقع</button>
-            <button data-tab="draw"><i class="fas fa-pen"></i> رسم</button>
+            <button data-tab="draw"><i class="fas fa-pen"></i> Draw</button>
             <button data-tab="files"><i class="fas fa-folder-open"></i> ملفات</button>
             <button data-tab="dashboard"><i class="fas fa-chart-line"></i> لوحة</button>
             <button data-tab="settings"><i class="fas fa-cog"></i> إعدادات</button>
@@ -768,27 +779,27 @@
             <!-- تبويب الرسم -->
             <div class="tab-pane" id="tab-draw">
                 <div class="tab-header">
-                    <h4><i class="fas fa-pen"></i> أدوات الرسم</h4>
+                    <h4><i class="fas fa-pen"></i> Drawing Tools</h4>
                 </div>
                 <div class="draw-tools-grid">
-                    <button class="draw-tool-btn" id="drawPointBtn"><i class="fas fa-map-marker-alt"></i> نقطة</button>
-                    <button class="draw-tool-btn" id="drawLineBtn"><i class="fas fa-slash"></i> خط</button>
-                    <button class="draw-tool-btn" id="drawPolygonBtn"><i class="fas fa-draw-polygon"></i> مضلع</button>
-                    <button class="draw-tool-btn" id="drawTextBtn"><i class="fas fa-font"></i> نص</button>
+                    <button class="draw-tool-btn" id="drawPointBtn"><i class="fas fa-map-marker-alt"></i> Point</button>
+                    <button class="draw-tool-btn" id="drawLineBtn"><i class="fas fa-slash"></i> Line</button>
+                    <button class="draw-tool-btn" id="drawPolygonBtn"><i class="fas fa-draw-polygon"></i> Polygon</button>
+                    <button class="draw-tool-btn" id="drawTextBtn"><i class="fas fa-font"></i> Text</button>
                 </div>
                 <div class="draw-style">
-                    <div class="ds-title"><i class="fas fa-palette"></i> نمط الرسم (لحظي)</div>
-                    <div class="ds-row"><label>لون الحدود / الخط</label><input type="color" id="dsStroke" value="#0e8f8a" /></div>
-                    <div class="ds-row"><label>لون التعبئة</label><input type="color" id="dsFill" value="#0e8f8a" /></div>
-                    <div class="ds-row"><label>سمك الخط <span class="ds-val" id="dsWeightVal">3</span> px</label>
+                    <div class="ds-title"><i class="fas fa-palette"></i> Draw Style (Live)</div>
+                    <div class="ds-row"><label>Stroke / Line Color</label><input type="color" id="dsStroke" value="#0e8f8a" /></div>
+                    <div class="ds-row"><label>Fill Color</label><input type="color" id="dsFill" value="#0e8f8a" /></div>
+                    <div class="ds-row"><label>Line Weight <span class="ds-val" id="dsWeightVal">3</span> px</label>
                         <input type="range" id="dsWeight" min="1" max="12" step="0.5" value="3" /></div>
-                    <div class="ds-row"><label>شفافية التعبئة <span class="ds-val" id="dsFillOpVal">40</span>%</label>
+                    <div class="ds-row"><label>Fill Opacity <span class="ds-val" id="dsFillOpVal">40</span>%</label>
                         <input type="range" id="dsFillOp" min="0" max="1" step="0.05" value="0.4" /></div>
                 </div>
-                <button class="draw-tool-btn coord-tool-btn" id="coordToolBtn"><i class="fas fa-table"></i> نقاط إحداثيات ← Excel</button>
-                <div class="coord-hint">اضغط على الخريطة لوضع النقاط، وبعدها صدّرها ملف Excel بالكود والخط العرض وخط الطول.</div>
-                <button class="draw-tool-btn attr-tool-btn" id="openAttrTableBtn"><i class="fas fa-layer-group"></i> جدول البيانات الوصفية (UTM) + تصدير</button>
-                <div class="coord-hint">لكل نقطة/خط/مضلع تُرسمه يُحسب تلقائياً إحداثي UTM (Zone / Easting / Northing) ويُخزَّن، ويمكنك تعديل البيانات ثم تصدير الكل إلى Excel أو CSV.</div>
+                <button class="draw-tool-btn coord-tool-btn" id="coordToolBtn"><i class="fas fa-table"></i> Coordinate Points → Excel</button>
+                <div class="coord-hint">Click on the map to place points, then export them to Excel with code, latitude and longitude.</div>
+                <button class="draw-tool-btn attr-tool-btn" id="openAttrTableBtn"><i class="fas fa-layer-group"></i> Attribute Table (UTM) + Export</button>
+                <div class="coord-hint">Every point/line/polygon you draw automatically gets a UTM coordinate (Zone / Easting / Northing) stored. You can edit attributes later, then export all to Excel or CSV.</div>
                 <div id="customFeaturesList"></div>
             </div>
 
@@ -1007,17 +1018,17 @@
     </div>
 </div>
 
-<!-- نافذة تسمية العنصر المرسوم -->
+<!-- نافذة تعديل خصائص العنصر المرسوم (اختيارية) -->
 <div class="modal-overlay" id="featureNameModal">
     <div class="modal">
-        <h3><i class="fas fa-pen" style="color:#0e8f8a;"></i> تسمية العنصر المرسوم</h3>
-        <label>اسم العنصر</label>
-        <input type="text" id="fnName" placeholder="مثال: خط رئيسي" maxlength="60" />
-        <label>الوصف (اختياري)</label>
-        <textarea id="fnDesc" placeholder="وصف العنصر"></textarea>
+        <h3><i class="fas fa-pen" style="color:#0e8f8a;"></i> Edit Feature Attributes</h3>
+        <label>Attribute Field: Name</label>
+        <input type="text" id="fnName" placeholder="e.g. Main Line" maxlength="60" />
+        <label>Description (optional)</label>
+        <textarea id="fnDesc" placeholder="Feature description"></textarea>
         <div class="modal-actions">
-            <button class="cancel-btn" id="cancelFnModal">إلغاء</button>
-            <button class="save-btn" id="saveFnModal"><i class="fas fa-check"></i> إضافة العنصر</button>
+            <button class="cancel-btn" id="cancelFnModal">Cancel</button>
+            <button class="save-btn" id="saveFnModal"><i class="fas fa-check"></i> Save / Done</button>
         </div>
     </div>
 </div>
@@ -1034,6 +1045,7 @@
         <div class="bs-head">
             <h3><i class="fas fa-table"></i> <span id="dtTitle">جدول البيانات الوصفية</span></h3>
             <div class="bs-tools">
+                <button type="button" id="attrAddCol" class="attr-btn addcol" title="Add Column"><i class="fas fa-plus"></i><span> Add Column</span></button>
                 <button type="button" id="attrZoomSel" class="attr-btn zoom" title="تكبير للتحديد"><i class="fas fa-search-plus"></i><span> تكبير للتحديد</span></button>
                 <button type="button" id="attrExportExcel" class="attr-btn excel" title="تصدير Excel"><i class="fas fa-file-excel"></i><span> Excel</span></button>
                 <button type="button" id="attrExportCsv" class="attr-btn csv" title="تصدير CSV"><i class="fas fa-file-csv"></i><span> CSV</span></button>
@@ -1041,8 +1053,38 @@
             </div>
         </div>
         <div class="bs-sub"><span id="dtSummary"></span><span id="dtSelection"></span></div>
-        <input type="text" class="data-table-search" id="dtSearch" placeholder="🔍 بحث في السجلات والخصائص..." />
+        <div class="dt-filterbar">
+            <input type="text" class="data-table-search" id="dtSearch" placeholder="Search attributes..." />
+            <div class="dt-fb-row">
+                <select class="dt-field-sel" id="dtField"><option value="">Filter by Field</option></select>
+                <input type="text" class="dt-field-val" id="dtFieldVal" placeholder="Value..." />
+                <button type="button" class="attr-btn clearf" id="dtClearFilter" title="Clear Filter"><i class="fas fa-filter-circle-xmark"></i><span> Clear Filter</span></button>
+            </div>
+        </div>
         <div class="data-table-wrap" id="dtWrap"></div>
+    </div>
+</div>
+
+<!-- ===== نافذة إضافة عمود جديد للطبقة ===== -->
+<div class="modal-overlay" id="addColModal">
+    <div class="modal">
+        <h3><i class="fas fa-table-columns" style="color:#0e8f8a;"></i> Add Column</h3>
+        <label>Column Name</label>
+        <input type="text" id="acName" placeholder="e.g. Material" maxlength="60" />
+        <label>Data Type</label>
+        <select id="acType">
+            <option value="text">Text</option>
+            <option value="number">Number</option>
+            <option value="select">Select (dropdown)</option>
+        </select>
+        <label id="acOptLabel" style="display:none;">Options (comma separated)</label>
+        <input type="text" id="acOptions" placeholder="PVC, HDPE, Steel" style="display:none;" />
+        <label>Default Value</label>
+        <input type="text" id="acDefault" placeholder="e.g. PVC" />
+        <div class="modal-actions">
+            <button class="cancel-btn" id="acCancel">Cancel</button>
+            <button class="save-btn" id="acSave"><i class="fas fa-plus"></i> Add Column</button>
+        </div>
     </div>
 </div>
 
@@ -1345,6 +1387,7 @@
 
     const customItems = new L.FeatureGroup();
     map.addLayer(customItems);
+    window.__activeDrawingId = null;   // العنصر المرسوم النشط حالياً (Active Layer)
     let customFeaturesData = [];
     let customIdCounter = 1;
     let activeDrawTool = null;
@@ -1468,7 +1511,14 @@
                 '<div class="fp-foot-grid">' + cells + '</div></div>';
         }
 
-        return '<div class="fp">' + head + table + footHtml + '</div>';
+        let editHtml = '';
+        if (opts && opts.editable && opts.featureId != null) {
+            editHtml = '<div class="fp-actions"><button type="button" class="fp-edit-btn" ' +
+                'onclick="window.openFeatureEditor&&window.openFeatureEditor(' + opts.featureId + ');return false;">' +
+                '<i class="fas fa-pen"></i> Edit Attributes</button></div>';
+        }
+
+        return '<div class="fp">' + head + table + footHtml + editHtml + '</div>';
     }
 
     // ===== تطبيع النص العربي للبحث =====
@@ -1505,8 +1555,7 @@
 
     function onTextMapClick(e) {
         stopCustomDraw();
-        pendingDraw = { kindLabel: 'نص', latlng: e.latlng };
-        openFeatureNameModal('نص');
+        commitDrawNow('نص', null, null, e.latlng);
     }
 
     function startCustomDraw(tool) {
@@ -1554,8 +1603,15 @@
         geojsonFeature.properties.name = name;
         geojsonFeature.properties.description = desc;
         geojsonFeature.properties.category = kind;
-        if (layer.bindPopup) layer.bindPopup(buildFeaturePopup(geojsonFeature), { maxWidth: 360, className: 'gis-popup' });
+        if (geojsonFeature.properties.type === undefined) geojsonFeature.properties.type = 'Draw';
+        if (geojsonFeature.properties.timestamp === undefined) geojsonFeature.properties.timestamp = new Date().toISOString();
+        // وراثة أعمدة المخطط المضافة تلقائياً للعنصر الجديد
+        customColumns.forEach(function (col) {
+            if (geojsonFeature.properties[col.name] === undefined) geojsonFeature.properties[col.name] = coerceColValue(col.type, col.def);
+        });
         const id = customIdCounter++;
+        if (layer.bindPopup) layer.bindPopup(buildFeaturePopup(geojsonFeature, { editable: true, featureId: id }), { maxWidth: 360, className: 'gis-popup' });
+        if (layer.on) layer.on('click', function () { window.__activeDrawingId = id; });
         // حساب وحفظ إحداثيات UTM تلقائياً (Zone / Easting / Northing)
         let utm = null;
         try { utm = featureUTM(geojsonFeature); } catch (e) { utm = null; }
@@ -1588,7 +1644,7 @@
         const container = document.getElementById('customFeaturesList');
         if (!container) return;
         if (customFeaturesData.length === 0) {
-            container.innerHTML = `<div class="empty-state"><div class="big-icon"><i class="fas fa-shapes"></i></div><h4>لا توجد عناصر مرسومة</h4><p>استخدم الأزرار أعلاه لإضافة نقطة أو خط أو مضلع أو نص</p></div>`;
+            container.innerHTML = `<div class="empty-state"><div class="big-icon"><i class="fas fa-shapes"></i></div><h4>No User Drawings</h4><p>Use the buttons above to add a point, line, polygon or text on the map.</p></div>`;
             return;
         }
         const iconMap = { 'نقطة':'fa-map-marker-alt', 'خط':'fa-slash', 'مضلع':'fa-draw-polygon', 'نص':'fa-font' };
@@ -1621,6 +1677,7 @@
                 if (cf && confirm(`هل تريد حذف "${cf.name}"؟`)) {
                     customItems.removeLayer(cf.layer);
                     customFeaturesData = customFeaturesData.filter(x => x.id !== id);
+                    if (window.__activeDrawingId === id) window.__activeDrawingId = null;
                     renderCustomFeatures();
                     updateTOC();
                 }
@@ -1659,50 +1716,82 @@
         o.addEventListener('input', function () { drawStyle.fillOpacity = parseFloat(this.value); document.getElementById('dsFillOpVal').textContent = Math.round(this.value * 100); applyDrawStyleToAll(); });
     })();
 
-    // ===== نافذة تسمية العنصر المرسوم (بدلاً من prompt) =====
-    let pendingDraw = null;
+    // ===== الرسم الفوري (بدون نافذة إلزامية) + محرّر خصائص اختياري =====
+    let pendingDraw = null;              // حارس قديم — لم يعد يُستخدم للتسمية
+    let editingFeatureId = null;
     const featureNameModal = document.getElementById('featureNameModal');
     const fnName = document.getElementById('fnName');
     const fnDesc = document.getElementById('fnDesc');
 
-    function openFeatureNameModal(kindLabel) {
-        fnName.value = '';
-        fnDesc.value = '';
-        document.querySelector('#featureNameModal h3').innerHTML =
-            `<i class="fas fa-pen" style="color:#0e8f8a;"></i> ${kindLabel === 'نص' ? 'نص الخريطة' : 'تسمية العنصر المرسوم'}`;
-        document.querySelector('#featureNameModal .save-btn').textContent = kindLabel === 'نص' ? 'إضافة النص' : 'إضافة العنصر';
-        featureNameModal.classList.add('active');
-        setTimeout(() => { try { fnName.focus(); } catch (e) {} }, 60);
+    // اسم افتراضي نظيف للعنصر المرسوم (Name: "Point #1" / "Line #1"...)
+    function defaultDrawName(kindLabel) {
+        const prefixMap = { 'نقطة': 'Point', 'خط': 'Line', 'مضلع': 'Polygon', 'نص': 'Text' };
+        const prefix = prefixMap[kindLabel] || 'Feature';
+        const n = customFeaturesData.filter(function (c) { return c.kind === kindLabel; }).length + 1;
+        return prefix + ' #' + n;
     }
 
-    function commitPendingDraw() {
-        if (!pendingDraw) return;
-        const p = pendingDraw;
-        pendingDraw = null;
-        const name = (fnName.value || '').trim() || p.kindLabel;
-        const desc = (fnDesc.value || '').trim();
-        featureNameModal.classList.remove('active');
-        if (p.kindLabel === 'نص') {
-            const marker = L.marker(p.latlng, {
+    // إنشاء العنصر المرسوم فوراً بقيم افتراضية دون مقاطعة سير العمل
+    function commitDrawNow(kindLabel, layer, feature, latlng) {
+        const name = defaultDrawName(kindLabel);
+        if (kindLabel === 'نص') {
+            const marker = L.marker(latlng, {
                 icon: L.divIcon({ html: `<div style="background:rgba(255,255,255,0.95);border:1.5px solid #e8973a;border-radius:6px;padding:3px 9px;font-size:12px;font-weight:700;color:#0a2a44;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);transform:translate(-50%,-100%);">${escapeHtml(name)}</div>`, className: '', iconSize: null })
             });
-            const feature = { type:'Feature', properties:{}, geometry:{ type:'Point', coordinates:[p.latlng.lng, p.latlng.lat] } };
-            addCustomFeature('نص', name, desc, marker, feature);
-        } else {
-            addCustomFeature(p.kindLabel, name, desc, p.layer, p.feature);
+            feature = { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [latlng.lng, latlng.lat] } };
+            layer = marker;
+        }
+        addCustomFeature(kindLabel, name, '', layer, feature);
+        const cf = customFeaturesData[customFeaturesData.length - 1];
+        if (cf) {
+            window.__activeDrawingId = cf.id;
+            setTimeout(function () { try { cf.layer.openPopup(); } catch (e) {} }, 120);
         }
     }
 
-    function cancelPendingDraw() {
-        pendingDraw = null;
+    // حارس توافقي قديم
+    function commitPendingDraw() { if (pendingDraw) { const p = pendingDraw; pendingDraw = null; commitDrawNow(p.kindLabel, p.layer, p.feature, p.latlng); } }
+    function cancelPendingDraw() { pendingDraw = null; }
+
+    // محرّر خصائص اختياري (يُفتح من النافذة المنبثقة أو جدول الصفات)
+    window.openFeatureEditor = function (id) {
+        const cf = customFeaturesData.find(function (x) { return x.id === id; });
+        if (!cf) return;
+        editingFeatureId = id;
+        fnName.value = cf.name || '';
+        fnDesc.value = cf.desc || '';
+        const h = document.querySelector('#featureNameModal h3');
+        if (h) h.innerHTML = '<i class="fas fa-pen" style="color:#0e8f8a;"></i> Edit Feature Attributes';
+        featureNameModal.classList.add('active');
+        try { map.closePopup(); } catch (e) {}
+        setTimeout(function () { try { fnName.focus(); } catch (e) {} }, 60);
+    };
+
+    function commitFeatureEdit() {
+        const cf = customFeaturesData.find(function (x) { return x.id === editingFeatureId; });
+        if (cf) {
+            cf.name = (fnName.value || '').trim() || cf.name;
+            cf.desc = (fnDesc.value || '').trim();
+            cf.geojson.properties.name = cf.name;
+            cf.geojson.properties.description = cf.desc;
+            refreshCustomLayerGeometry(cf);
+            renderCustomFeatures();
+            updateTOC();
+        }
+        editingFeatureId = null;
         featureNameModal.classList.remove('active');
     }
 
-    document.getElementById('saveFnModal').addEventListener('click', commitPendingDraw);
-    document.getElementById('cancelFnModal').addEventListener('click', cancelPendingDraw);
-    featureNameModal.addEventListener('click', function(e) { if (e.target === this) cancelPendingDraw(); });
-    fnName.addEventListener('keydown', function(e) { if (e.key === 'Enter') commitPendingDraw(); });
-    fnDesc.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); commitPendingDraw(); } });
+    function cancelFeatureEdit() {
+        editingFeatureId = null;
+        featureNameModal.classList.remove('active');
+    }
+
+    document.getElementById('saveFnModal').addEventListener('click', commitFeatureEdit);
+    document.getElementById('cancelFnModal').addEventListener('click', cancelFeatureEdit);
+    featureNameModal.addEventListener('click', function(e) { if (e.target === this) cancelFeatureEdit(); });
+    fnName.addEventListener('keydown', function(e) { if (e.key === 'Enter') commitFeatureEdit(); });
+    fnDesc.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); commitFeatureEdit(); } });
 
     // ===== أدوات القياس =====
     const measureItems = new L.FeatureGroup();
@@ -2069,6 +2158,94 @@
     let attrSelected = null;
     const KIND_TO_AR = { point: 'نقطة', line: 'خط', polygon: 'مضلع' };
 
+    // ===== مخطط الأعمدة المضافة (Add Column) =====
+    let customColumns = [];
+    let fileColumns = {};
+    let attrFieldFilter = { field: '', value: '' };
+
+    function activeAttrColumns() {
+        if (attrSource.type === 'file') return fileColumns[attrSource.id] || [];
+        if (attrSource.type === 'custom') return customColumns;
+        return [];
+    }
+
+    function coerceColValue(type, val) {
+        if (type === 'number') {
+            if (val == null || String(val).trim() === '') return '';
+            const n = parseFloat(val);
+            return isFinite(n) ? n : String(val);
+        }
+        return val == null ? '' : String(val);
+    }
+
+    function attrSourceFeatures() {
+        if (attrSource.type === 'file') {
+            const file = uploadedFiles.find(function (f) { return f.id === attrSource.id; });
+            return (file && file.data && Array.isArray(file.data.features)) ? file.data.features : [];
+        }
+        if (attrSource.type === 'custom') return customFeaturesData.map(function (cf) { return cf.geojson; });
+        return [];
+    }
+
+    function applyColumnToSource(column) {
+        attrSourceFeatures().forEach(function (f) {
+            if (!f) return;
+            f.properties = f.properties || {};
+            f.properties[column.name] = coerceColValue(column.type, column.def);
+        });
+    }
+
+    function rowFieldValue(r, field) {
+        if (!r) return '';
+        if (field === 'kindLabel') return r.kindLabel || '';
+        if (field === 'name') return r.name || '';
+        if (field === 'desc') return r.desc || '';
+        if (r.geojson && r.geojson.properties) return r.geojson.properties[field];
+        return '';
+    }
+
+    function refreshFieldFilterOptions() {
+        const sel = document.getElementById('dtField');
+        if (!sel) return;
+        const cols = activeAttrColumns();
+        let html = '<option value="">Filter by Field</option>';
+        html += '<option value="name">الاسم</option><option value="desc">الوصف</option><option value="kindLabel">النوع</option>';
+        cols.forEach(function (c) { html += '<option value="' + escapeHtml(c.name) + '">' + escapeHtml(c.name) + '</option>'; });
+        sel.innerHTML = html;
+        sel.value = attrFieldFilter.field || '';
+        const vEl = document.getElementById('dtFieldVal');
+        if (vEl) vEl.value = attrFieldFilter.value || '';
+    }
+
+    function applyAttrHighlight(list) {
+        const hl = ensureHighlightLayer();
+        try { hl.clearLayers(); } catch (e) {}
+        const feats = (list || []).map(function (r) { return r.geojson; }).filter(function (g) { return g && g.geometry; });
+        if (feats.length) { try { hl.addData({ type: 'FeatureCollection', features: feats }); } catch (e) {} }
+        if (hl.bringToFront) hl.bringToFront();
+        if (attrSource.type === 'custom') {
+            const matchIds = {};
+            (list || []).forEach(function (r) { if (r.id != null) matchIds[r.id] = 1; });
+            customFeaturesData.forEach(function (cf) {
+                if (!cf.layer) return;
+                const on = !!matchIds[cf.id];
+                if (cf.kind === 'نقطة' || cf.kind === 'نص') {
+                    if (cf.layer.setOpacity) cf.layer.setOpacity(on ? 1 : 0.15);
+                } else if (cf.layer.setStyle) {
+                    cf.layer.setStyle({ opacity: on ? 1 : 0.12, fillOpacity: on ? (cf.fillOpacity != null ? cf.fillOpacity : 0.4) : 0.05 });
+                }
+            });
+        }
+    }
+
+    function restoreAttrDimming() {
+        if (attrSource.type !== 'custom') return;
+        customFeaturesData.forEach(function (cf) {
+            if (cf.layer && cf.kind === 'نقطة' && cf.layer.setOpacity) cf.layer.setOpacity(1);
+            applyCustomFeatureStyle(cf);
+        });
+    }
+
     function ensureHighlightLayer() {
         if (!highlightLayer) {
             highlightLayer = L.geoJSON(null, {
@@ -2187,6 +2364,10 @@
         const t = document.getElementById('dtTitle'); if (t) t.textContent = title;
         const s = document.getElementById('dtSearch'); if (s) s.value = '';
         const sel = document.getElementById('dtSelection'); if (sel) sel.textContent = '';
+        attrFieldFilter = { field: '', value: '' };
+        refreshFieldFilterOptions();
+        window.clearFeatureHighlight();
+        restoreAttrDimming();
         const modal = document.getElementById('dataTableModal');
         modal.classList.remove('collapsed');
         renderAttrTable('');
@@ -2224,24 +2405,34 @@
         const wrap = document.getElementById('dtWrap');
         if (!wrap) return;
         const all = collectAttrRows();
+        const cols = activeAttrColumns();
         const raw = String(rawQ == null ? '' : rawQ).trim();
         const q = arNorm(raw);
+        const fld = attrFieldFilter.field;
+        const fval = arNorm(attrFieldFilter.value);
+        const filtering = raw !== '' || (fld !== '' && fval !== '');
         let list = all;
-        if (q) list = all.filter(function (r) {
-            return arNorm(r.name).includes(q) || arNorm(r.desc).includes(q) || arNorm(r.kindLabel).includes(q) || String(r.idx).includes(q);
+        if (q) list = list.filter(function (r) {
+            if (arNorm(r.name).includes(q) || arNorm(r.desc).includes(q) || arNorm(r.kindLabel).includes(q) || String(r.idx).includes(q)) return true;
+            return cols.some(function (c) { return arNorm(rowFieldValue(r, c.name)).includes(q); });
         });
+        if (fld && fval) list = list.filter(function (r) { return arNorm(rowFieldValue(r, fld)).includes(fval); });
         const sum = document.getElementById('dtSummary');
-        if (sum) sum.textContent = raw
-            ? `نتائج البحث عن «${raw}»: ${list.length} من ${all.length} سجل`
+        if (sum) sum.textContent = filtering
+            ? `نتائج التصفية: ${list.length} من ${all.length} سجل`
             : `عدد السجلات: ${all.length} — الإحداثيات بنظام UTM (WGS84 → UTM)`;
 
         if (!list.length) {
             wrap.innerHTML = `<div style="padding:20px;text-align:center;color:#999;">لا توجد نتائج مطابقة</div>`;
+            window.__attrList = list;
+            if (filtering) applyAttrHighlight([]); else { window.clearFeatureHighlight(); restoreAttrDimming(); }
             return;
         }
 
         const editable = attrSource.type === 'custom';
-        const head = `<tr><th>#</th><th>النوع</th><th>الاسم</th><th>الوصف</th><th>Zone</th><th>Easting (E)</th><th>Northing (N)</th><th>الطول (م)</th><th>المساحة (م²)</th>${editable ? '<th>حذف</th>' : ''}</tr>`;
+        const canEditCols = attrSource.type === 'custom' || attrSource.type === 'file';
+        const dynHead = cols.map(function (c) { return `<th>${escapeHtml(c.name)}</th>`; }).join('');
+        const head = `<tr><th>#</th><th>النوع</th><th>الاسم</th><th>الوصف</th><th>Zone</th><th>Easting (E)</th><th>Northing (N)</th><th>الطول (م)</th><th>المساحة (م²)</th>${dynHead}${editable ? '<th>حذف</th>' : ''}</tr>`;
         let body = '';
         list.forEach((r, i) => {
             const u = featureUTM(r.geojson) || {};
@@ -2262,6 +2453,22 @@
             const nCell = r.editable
                 ? `<input class="attr-edit attr-num" data-id="${r.id}" data-field="northing" value="${nVal}" />`
                 : `<span class="attr-ro">${nVal || '—'}</span>`;
+            let dynCells = '';
+            cols.forEach(function (c) {
+                const v = (r.geojson && r.geojson.properties) ? r.geojson.properties[c.name] : '';
+                if (canEditCols) {
+                    if (c.type === 'select' && Array.isArray(c.options) && c.options.length) {
+                        const opts = c.options.map(function (o) { return `<option value="${escapeHtml(o)}"${String(v) === String(o) ? ' selected' : ''}>${escapeHtml(o)}</option>`; }).join('');
+                        dynCells += `<td><select class="attr-edit attr-select" data-row="${i}" data-col="${escapeHtml(c.name)}"><option value=""></option>${opts}</select></td>`;
+                    } else {
+                        const itype = c.type === 'number' ? 'number' : 'text';
+                        const cls = c.type === 'number' ? 'attr-edit attr-num' : 'attr-edit';
+                        dynCells += `<td><input type="${itype}" class="${cls}" data-row="${i}" data-col="${escapeHtml(c.name)}" value="${escapeHtml(v == null ? '' : String(v))}" /></td>`;
+                    }
+                } else {
+                    dynCells += `<td><span class="attr-ro">${v == null || v === '' ? '—' : escapeHtml(String(v))}</span></td>`;
+                }
+            });
             const delCell = r.editable
                 ? `<td><button class="attr-row-del" data-id="${r.id}" title="حذف السجل"><i class="fas fa-trash-alt"></i></button></td>`
                 : '';
@@ -2275,6 +2482,7 @@
                 <td>${nCell}</td>
                 <td><span class="attr-ro">${len ? len.toFixed(2) : '—'}</span></td>
                 <td><span class="attr-ro">${area ? area.toFixed(2) : '—'}</span></td>
+                ${dynCells}
                 ${delCell}
             </tr>`;
         });
@@ -2295,6 +2503,7 @@
                 if (cf && confirm(`هل تريد حذف "${cf.name}"؟`)) {
                     customItems.removeLayer(cf.layer);
                     customFeaturesData = customFeaturesData.filter(x => x.id !== id);
+                    if (window.__activeDrawingId === id) window.__activeDrawingId = null;
                     renderCustomFeatures();
                     updateTOC();
                     renderAttrTable(document.getElementById('dtSearch').value);
@@ -2307,6 +2516,7 @@
                 const row = window.__attrList[idx];
                 if (!row) return null;
                 attrSelected = idx;
+                if (row.id != null) window.__activeDrawingId = row.id;
                 wrap.querySelectorAll('tbody tr').forEach(x => x.classList.remove('dt-selected'));
                 tr.classList.add('dt-selected');
                 const sel = document.getElementById('dtSelection');
@@ -2325,10 +2535,13 @@
                 if (row) window.selectFeatureOnMap(row.geojson, true);
             });
         });
+
+        if (filtering) applyAttrHighlight(list); else { window.clearFeatureHighlight(); restoreAttrDimming(); }
     }
 
     function onAttrEdit(e) {
         const inp = e.currentTarget;
+        if (inp.dataset.col) { applyColEdit(inp); return; }
         const id = parseInt(inp.dataset.id);
         const field = inp.dataset.field;
         const cf = customFeaturesData.find(x => x.id === id);
@@ -2361,17 +2574,93 @@
         }
     }
 
+    function applyColEdit(inp) {
+        const row = (window.__attrList || [])[parseInt(inp.dataset.row)];
+        if (!row || !row.geojson) return;
+        row.geojson.properties = row.geojson.properties || {};
+        const colName = inp.dataset.col;
+        const def = activeAttrColumns().find(function (c) { return c.name === colName; });
+        row.geojson.properties[colName] = coerceColValue(def ? def.type : 'text', inp.value);
+        if (attrSource.type === 'custom' && row.id != null) {
+            const cf = customFeaturesData.find(function (x) { return x.id === row.id; });
+            if (cf) { refreshCustomLayerGeometry(cf); }
+        }
+        showSaveStatus('✓ تم تحديث العمود «' + colName + '»');
+    }
+
+    function updateAddColTypeUI() {
+        const ty = document.getElementById('acType');
+        const isSel = ty && ty.value === 'select';
+        const lbl = document.getElementById('acOptLabel');
+        const op = document.getElementById('acOptions');
+        if (lbl) lbl.style.display = isSel ? '' : 'none';
+        if (op) op.style.display = isSel ? '' : 'none';
+    }
+
+    function openAddColumnModal() {
+        if (attrSource.type === 'location') { showSaveStatus('لا يمكن إضافة أعمدة لبيانات المواقع'); return; }
+        const m = document.getElementById('addColModal');
+        const nm = document.getElementById('acName'); if (nm) nm.value = '';
+        const ty = document.getElementById('acType'); if (ty) ty.value = 'text';
+        const op = document.getElementById('acOptions'); if (op) op.value = '';
+        const df = document.getElementById('acDefault'); if (df) df.value = '';
+        updateAddColTypeUI();
+        if (m) m.classList.add('active');
+        setTimeout(function () { try { if (nm) nm.focus(); } catch (e) {} }, 60);
+    }
+
+    function saveAddColumn() {
+        const nm = document.getElementById('acName');
+        const name = (nm ? nm.value : '').trim();
+        if (!name) { showSaveStatus('يرجى إدخال اسم العمود', true); return; }
+        if (/^(utm_zone|utm_easting|utm_northing|utm_hemisphere|length_m|area_m2)$/i.test(name) || /^(name|description|desc|id)$/i.test(name)) {
+            showSaveStatus('هذا الاسم محجوز، اختر اسماً آخر', true); return;
+        }
+        const existing = activeAttrColumns();
+        if (existing.some(function (c) { return String(c.name).toLowerCase() === name.toLowerCase(); })) {
+            showSaveStatus('يوجد عمود بهذا الاسم بالفعل', true); return;
+        }
+        const tyEl = document.getElementById('acType');
+        const type = tyEl ? tyEl.value : 'text';
+        const rawDefault = (document.getElementById('acDefault') || {}).value || '';
+        let options = [];
+        if (type === 'select') {
+            options = String((document.getElementById('acOptions') || {}).value || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        }
+        const column = { name: name, type: type, options: options, def: coerceColValue(type, rawDefault) };
+        if (attrSource.type === 'file') {
+            fileColumns[attrSource.id] = fileColumns[attrSource.id] || [];
+            fileColumns[attrSource.id].push(column);
+        } else {
+            customColumns.push(column);
+        }
+        applyColumnToSource(column);
+        if (attrSource.type === 'custom') customFeaturesData.forEach(function (cf) { bindCustomPopup(cf); });
+        const m = document.getElementById('addColModal');
+        if (m) m.classList.remove('active');
+        refreshFieldFilterOptions();
+        const s = document.getElementById('dtSearch');
+        renderAttrTable(s ? s.value : '');
+        showSaveStatus('✓ تمت إضافة العمود «' + name + '»');
+    }
+
     function buildFeatureRows() {
-        return customFeaturesData.map((cf, i) => {
+        const cols = customColumns;
+        return customFeaturesData.map(function (cf, i) {
             const u = featureUTM(cf.geojson) || {};
             const len = featureLengthM(cf.geojson), area = featureAreaM2(cf.geojson);
-            return {
+            const row = {
                 '#': i + 1, 'ID': cf.id, 'النوع': ATTR_TYPE_LABEL[cf.kind] || cf.kind, 'الاسم': cf.name, 'الوصف': cf.desc || '',
                 'Zone': u.zone || '', 'Hemisphere': u.hemisphere || '',
                 'Easting (E)': isFinite(u.easting) ? +u.easting.toFixed(3) : '',
                 'Northing (N)': isFinite(u.northing) ? +u.northing.toFixed(3) : '',
                 'الطول (م)': len ? +len.toFixed(2) : '', 'المساحة (م²)': area ? +area.toFixed(2) : ''
             };
+            (cols || []).forEach(function (c) {
+                const v = (cf.geojson && cf.geojson.properties) ? cf.geojson.properties[c.name] : '';
+                row[c.name] = (v == null) ? '' : v;
+            });
+            return row;
         });
     }
 
@@ -2396,14 +2685,17 @@
         if (typeof XLSX === 'undefined') { exportAttrCsv(); return; }
         const wb = XLSX.utils.book_new();
         if (attrSource.type === 'file') {
+            const fcols = activeAttrColumns();
             const data = rows.map(r => {
                 const u = featureUTM(r.geojson) || {};
                 const len = featureLengthM(r.geojson), area = featureAreaM2(r.geojson);
-                return { '#': r.idx, 'النوع': r.kindLabel, 'الاسم': r.name, 'الوصف': r.desc,
+                const obj = { '#': r.idx, 'النوع': r.kindLabel, 'الاسم': r.name, 'الوصف': r.desc,
                     'Zone': u.zone || '', 'Hemisphere': u.hemisphere || '',
                     'Easting (E)': isFinite(u.easting) ? +u.easting.toFixed(3) : '',
                     'Northing (N)': isFinite(u.northing) ? +u.northing.toFixed(3) : '',
                     'الطول (م)': len ? +len.toFixed(2) : '', 'المساحة (م²)': area ? +area.toFixed(2) : '' };
+                fcols.forEach(function (c) { obj[c.name] = (r.geojson && r.geojson.properties && r.geojson.properties[c.name] != null) ? r.geojson.properties[c.name] : ''; });
+                return obj;
             });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'السجلات');
             XLSX.writeFile(wb, 'table-' + stamp + '.xlsx');
@@ -2432,15 +2724,17 @@
         const rows = collectAttrRows();
         if (!rows.length) { alert('لا توجد سجلات للتصدير.'); return; }
         const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
-        const keys = ['#', 'النوع', 'الاسم', 'الوصف', 'Zone', 'Hemisphere', 'Easting (E)', 'Northing (N)', 'الطول (م)', 'المساحة (م²)'];
+        const cols = activeAttrColumns();
+        const keys = ['#', 'النوع', 'الاسم', 'الوصف', 'Zone', 'Hemisphere', 'Easting (E)', 'Northing (N)', 'الطول (م)', 'المساحة (م²)'].concat(cols.map(function (c) { return c.name; }));
         const esc = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
         const lines = [keys.join(',')];
         rows.forEach(r => {
             const u = featureUTM(r.geojson) || {};
             const len = featureLengthM(r.geojson), area = featureAreaM2(r.geojson);
+            const dyn = cols.map(function (c) { return esc((r.geojson && r.geojson.properties) ? r.geojson.properties[c.name] : ''); });
             lines.push([r.idx, r.kindLabel, r.name, r.desc, u.zone || '', u.hemisphere || '',
                 isFinite(u.easting) ? u.easting.toFixed(3) : '', isFinite(u.northing) ? u.northing.toFixed(3) : '',
-                len ? len.toFixed(2) : '', area ? area.toFixed(2) : ''].map(esc).join(','));
+                len ? len.toFixed(2) : '', area ? area.toFixed(2) : ''].map(esc).concat(dyn).join(','));
         });
         const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
         if (typeof saveAs === 'function') { saveAs(blob, 'table-' + stamp + '.csv'); return; }
@@ -2457,10 +2751,10 @@
         if (searchEl) searchEl.addEventListener('input', function () { renderAttrTable(this.value); });
         const modalEl = document.getElementById('dataTableModal');
         const closeEl = document.getElementById('dtClose');
-        if (closeEl) closeEl.addEventListener('click', function () { window.clearFeatureHighlight(); modalEl.classList.remove('active'); });
+        if (closeEl) closeEl.addEventListener('click', function () { window.clearFeatureHighlight(); restoreAttrDimming(); modalEl.classList.remove('active'); });
         const collapseBtn = document.getElementById('dtCollapse');
         if (collapseBtn) collapseBtn.addEventListener('click', function () { modalEl.classList.toggle('collapsed'); });
-        if (modalEl) modalEl.addEventListener('click', function (e) { if (e.target === this) { window.clearFeatureHighlight(); this.classList.remove('active'); } });
+        if (modalEl) modalEl.addEventListener('click', function (e) { if (e.target === this) { window.clearFeatureHighlight(); restoreAttrDimming(); this.classList.remove('active'); } });
         const zoomBtn = document.getElementById('attrZoomSel');
         if (zoomBtn) zoomBtn.addEventListener('click', function () {
             const row = attrSelected != null ? (window.__attrList || [])[attrSelected] : null;
@@ -2471,6 +2765,28 @@
         if (xlBtn) xlBtn.addEventListener('click', exportAttrExcel);
         const csvBtn = document.getElementById('attrExportCsv');
         if (csvBtn) csvBtn.addEventListener('click', exportAttrCsv);
+        const addBtn = document.getElementById('attrAddCol');
+        if (addBtn) addBtn.addEventListener('click', openAddColumnModal);
+        const acSave = document.getElementById('acSave');
+        if (acSave) acSave.addEventListener('click', saveAddColumn);
+        const acCancel = document.getElementById('acCancel');
+        const acModal = document.getElementById('addColModal');
+        if (acCancel) acCancel.addEventListener('click', function () { if (acModal) acModal.classList.remove('active'); });
+        if (acModal) acModal.addEventListener('click', function (e) { if (e.target === this) this.classList.remove('active'); });
+        const acType = document.getElementById('acType');
+        if (acType) acType.addEventListener('change', updateAddColTypeUI);
+        const fieldSel = document.getElementById('dtField');
+        if (fieldSel) fieldSel.addEventListener('change', function () { attrFieldFilter.field = this.value; const s = document.getElementById('dtSearch'); renderAttrTable(s ? s.value : ''); });
+        const fieldVal = document.getElementById('dtFieldVal');
+        if (fieldVal) fieldVal.addEventListener('input', function () { attrFieldFilter.value = this.value; const s = document.getElementById('dtSearch'); renderAttrTable(s ? s.value : ''); });
+        const clearBtn = document.getElementById('dtClearFilter');
+        if (clearBtn) clearBtn.addEventListener('click', function () {
+            attrFieldFilter = { field: '', value: '' };
+            const s = document.getElementById('dtSearch'); if (s) s.value = '';
+            const f = document.getElementById('dtField'); if (f) f.value = '';
+            const v = document.getElementById('dtFieldVal'); if (v) v.value = '';
+            renderAttrTable('');
+        });
     })();
 
     // ================================================================
@@ -2571,8 +2887,7 @@
             let feature;
             try { feature = layer.toGeoJSON(); } catch(err) { feature = { type: 'Feature', properties: {}, geometry: null }; }
             stopCustomDraw();
-            pendingDraw = { kindLabel, layer, feature };
-            openFeatureNameModal(kindLabel);
+            commitDrawNow(kindLabel, layer, feature);
             return;
         }
         if (measureMode === 'distance') {
@@ -2599,7 +2914,7 @@
     });
 
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') { if (measureMode) stopMeasuring(); if (activeDrawTool) stopCustomDraw(); if (pendingDraw) cancelPendingDraw(); if (typeof closeControlPanel === 'function') closeControlPanel(); const atm = document.getElementById('dataTableModal'); if (atm) { atm.classList.remove('active'); if (typeof clearFeatureHighlight === 'function') clearFeatureHighlight(); } }
+        if (e.key === 'Escape') { if (measureMode) stopMeasuring(); if (activeDrawTool) stopCustomDraw(); if (pendingDraw) cancelPendingDraw(); if (typeof closeControlPanel === 'function') closeControlPanel(); const atm = document.getElementById('dataTableModal'); if (atm) { atm.classList.remove('active'); if (typeof clearFeatureHighlight === 'function') clearFeatureHighlight(); if (typeof restoreAttrDimming === 'function') restoreAttrDimming(); } }
     });
 
     // ================================================================
