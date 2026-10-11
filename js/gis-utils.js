@@ -40,10 +40,41 @@
         };
     }
 
+    /* العناصر المرسومة يدوياً (User Drawings / Active Layer) */
+    function drawingsList() {
+        var arr = (typeof customFeaturesData !== 'undefined' ? customFeaturesData : null) || [];
+        return arr.filter(function (cf) { return cf && cf.geojson && cf.geojson.geometry; }).map(function (cf) {
+            return { f: cf.geojson, layer: cf.layer, source: 'custom', id: cf.id, name: cf.name || 'User Drawing' };
+        });
+    }
+
+    /* العناصر النشطة: التحديد الحالي، وإلا العنصر المرسوم النشط، وإلا كل العناصر المرسومة */
+    function activeFeatures() {
+        var sel = window.__selectedFeatures;
+        if (sel && Array.isArray(sel.features) && sel.features.length) {
+            return sel.features.map(function (f) {
+                return { f: f, source: 'selected', name: (f.properties && (f.properties.name || f.properties.id)) || 'Selected Feature' };
+            });
+        }
+        var drawings = drawingsList();
+        var activeId = window.__activeDrawingId;
+        if (activeId != null) {
+            var hit = drawings.filter(function (o) { return o.id === activeId; });
+            if (hit.length) { return hit; }
+        }
+        return drawings;
+    }
+
     /* إرجاع عناصر النطاق المختار مع مصدرها واسمها */
     function sourceFeatures(scope) {
         var out = [];
         scope = scope || 'all';
+        if (scope === 'active') {
+            return activeFeatures();
+        }
+        if (scope === 'drawings') {
+            return drawingsList();
+        }
         if (scope === 'selected') {
             var sel = window.__selectedFeatures;
             if (sel && Array.isArray(sel.features)) {
@@ -193,6 +224,8 @@
         el: el,
         geomType: geomType,
         sourceFeatures: sourceFeatures,
+        drawingsList: drawingsList,
+        activeFeatures: activeFeatures,
         fcFromScope: fcFromScope,
         toFeatureCollection: toFeatureCollection,
         numericFields: numericFields,
