@@ -9,8 +9,8 @@
 
     function filePolygons() {
         var out = [];
-        var cd = window.currentData;
-        var gl = window.geoLayer;
+        var cd = (typeof currentData !== 'undefined' ? currentData : null);
+        var gl = (typeof geoLayer !== 'undefined' ? geoLayer : null);
         if (cd && Array.isArray(cd.features)) {
             cd.features.forEach(function (f) {
                 if (U.geomType(f) !== 'polygon') { return; }
@@ -22,7 +22,7 @@
         return out;
     }
     function customPolygons() {
-        return (window.customFeaturesData || []).filter(function (cf) { return cf.geojson && U.geomType(cf.geojson) === 'polygon'; })
+        return ((typeof customFeaturesData !== 'undefined' ? customFeaturesData : null) || []).filter(function (cf) { return cf.geojson && U.geomType(cf.geojson) === 'polygon'; })
             .map(function (cf) { return { f: cf.geojson, layer: cf.layer, name: cf.name || 'مضلع', origin: 'custom' }; });
     }
     function polygons(scope) {
