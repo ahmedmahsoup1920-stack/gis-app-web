@@ -6,7 +6,7 @@
       ويعمل بدون إنترنت عند انقطاعه.
    ================================================================ */
 
-const VERSION = 'gis-water-v9';
+const VERSION = 'gis-water-v10';
 const CACHE = VERSION + '-cache';
 
 /* ملفات التطبيق الأساسية (نخزّنها عند التثبيت) */
@@ -14,6 +14,8 @@ const CORE_ASSETS = [
     './',
     './index.html',
     './manifest.json',
+    './js/gis-core.js',
+    './js/gis-system-info.js',
     './icons/icon-192.png',
     './icons/icon-512.png',
     './icons/icon-maskable-512.png',
