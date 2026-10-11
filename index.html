@@ -387,32 +387,35 @@
         .detail-popup td { padding:4px 8px; border-bottom:1px solid #eee; }
         .detail-popup td:first-child { font-weight:700; color:#0a2a44; width:40%; }
         .detail-popup td:last-child { text-align:left; }
-        /* ===== النافذة المنبثقة للعناصر (Attribute Popup) — داكنة احترافية ===== */
+        /* ===== النافذة المنبثقة لخصائص الميزة (Feature Popup) — داكنة احترافية ===== */
         .leaflet-popup-content-wrapper { background:#0f172a !important; color:#e2e8f0 !important; border:1px solid #334155; border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.55); padding:0; overflow:hidden; }
         .leaflet-popup-content { margin:0 !important; width:auto !important; }
         .leaflet-popup-tip { background:#0f172a; border:1px solid #334155; }
-        .leaflet-popup-close-button { color:#94a3b8 !important; top:5px !important; right:8px !important; font-size:18px !important; }
-        .leaflet-popup-close-button:hover { color:#fff !important; }
-        .fp { min-width:230px; max-width:360px; font-size:12.5px; direction:rtl; text-align:right; }
-        .fp-head { display:flex; align-items:center; gap:8px; padding:10px 13px; font-weight:800; font-size:13.5px; color:#fff;
+        .leaflet-popup.gis-popup .leaflet-popup-close-button { display:none !important; }
+        .fp { min-width:250px; max-width:360px; font-size:12.5px; direction:rtl; text-align:right; }
+        .fp-head { display:flex; align-items:center; gap:8px; padding:10px 12px; font-weight:800; font-size:13px; color:#fff;
             background:linear-gradient(135deg,#0369a1,#0284c7); }
-        .fp-head i { color:#7dd3fc; }
-        .fp-head span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .fp-head > i { color:#7dd3fc; flex-shrink:0; }
+        .fp-title { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .fp-close { flex-shrink:0; width:24px; height:24px; border:none; border-radius:7px; cursor:pointer;
+            background:rgba(255,255,255,.16); color:#fff; font-size:16px; line-height:1; font-weight:700;
+            display:flex; align-items:center; justify-content:center; transition:background .15s; }
+        .fp-close:hover { background:rgba(239,68,68,.85); }
         .fp-table { width:100%; border-collapse:collapse; }
-        .fp-table td { padding:6px 13px; border-bottom:1px solid #1e293b; vertical-align:top; word-break:break-word; }
+        .fp-table td { padding:6px 12px; border-bottom:1px solid #1e293b; vertical-align:top; word-break:break-word; }
         .fp-table tr:last-child td { border-bottom:none; }
         .fp-table tr:nth-child(even) td { background:#1e293b; }
-        .fp-table td:first-child { color:#7dd3fc; font-weight:700; width:38%; padding-inline-end:8px; }
+        .fp-table td:first-child { color:#7dd3fc; font-weight:700; width:42%; padding-inline-end:8px; white-space:nowrap; }
         .fp-table td:last-child { color:#e2e8f0; }
-        .fp-table td.rich { padding:5px 10px; }
-        .fp-table td.rich table { width:100%; border-collapse:collapse; }
-        .fp-table td.rich td, .fp-table td.rich th { border:1px solid #334155 !important; padding:3px 6px !important; background:transparent !important; }
-        .fp-table td.rich a { color:#38bdf8; }
         .fp-empty { padding:12px 13px; color:#94a3b8; font-size:12px; }
-        .fp-foot { display:flex; flex-wrap:wrap; gap:5px 14px; padding:8px 13px; background:#0b1220;
-            border-top:1px solid #334155; font-size:11.5px; direction:ltr; text-align:left; }
-        .fp-foot span { color:#94a3b8; white-space:nowrap; }
-        .fp-foot b { color:#10b981; font-weight:700; margin-inline-end:4px; }
+        .fp-foot { background:#0b1220; border-top:1px solid #334155; padding:8px 12px 10px; direction:ltr; text-align:left; }
+        .fp-foot-title { color:#7dd3fc; font-size:11px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+        .fp-foot-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; }
+        .fp-foot-grid span { color:#94a3b8; font-size:11.5px; white-space:nowrap; }
+        .fp-foot-grid b { color:#10b981; font-weight:700; margin-inline-end:5px; }
+        /* ===== نبض تمييز العنصر المحدد على الخريطة ===== */
+        @keyframes gisHlPulse { 0%,100%{ stroke-opacity:1; } 50%{ stroke-opacity:.3; } }
+        .gis-hl { animation: gisHlPulse 1.2s ease-in-out infinite; }
         /* ===== لوحة التحكم بالطبقة (منبثقة) ===== */
         .control-panel-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:3000; justify-content:center; align-items:center; }
         .control-panel-overlay.active { display:flex; }
@@ -1295,29 +1298,23 @@
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
     // ================================================================
-    //  النوافذ المنبثقة للعناصر (Attribute Popup) — جدول احترافي داكن
+    //  النافذة المنبثقة لخصائص الميزة (Feature Attributes Popup) — داكن
     // ================================================================
-    const POPUP_ALLOWED = { TABLE:1,THEAD:1,TBODY:1,TFOOT:1,TR:1,TD:1,TH:1,CAPTION:1,B:1,STRONG:1,I:1,EM:1,U:1,S:1,BR:1,SPAN:1,P:1,DIV:1,UL:1,OL:1,LI:1,A:1,SMALL:1,HR:1,SUB:1,SUP:1,H1:1,H2:1,H3:1,H4:1,H5:1,H6:1 };
-    const POPUP_BLOCKED = 'script,style,iframe,object,embed,link,meta,base,form,input,button,textarea,select';
+    function popupPrecision() { try { return appSettings.precision || 6; } catch (_) { return 6; } }
 
-    // تنقية HTML الموجود داخل الخصائص: إبقاء وسوم آمنة (جداول/نص) وحذف السكربتات والأحداث
-    function sanitizeRich(value) {
-        const s = String(value == null ? '' : value);
-        if (!/[<>&]/.test(s)) return escapeHtml(s);
-        let root;
-        try { root = new DOMParser().parseFromString('<div>' + s + '</div>', 'text/html').body.firstChild; }
-        catch (_) { return escapeHtml(s); }
-        let guard = 0, bad;
-        while ((bad = root.querySelector(POPUP_BLOCKED)) && guard++ < 300) bad.remove();
-        Array.from(root.querySelectorAll('*')).forEach(function (ch) {
-            if (!POPUP_ALLOWED[ch.tagName]) { ch.replaceWith.apply(ch, Array.from(ch.childNodes)); return; }
-            Array.from(ch.attributes).forEach(function (a) {
-                const n = a.name.toLowerCase();
-                if (n.indexOf('on') === 0 || n === 'style' || n === 'src' || n === 'srcdoc') ch.removeAttribute(a.name);
-                else if (n === 'href' && /^\s*(javascript|data):/i.test(a.value)) ch.removeAttribute('href');
-            });
-        });
-        return root.innerHTML;
+    // تحويل قيمة الخاصية إلى نص نظيف: إزالة الوسوم والسكربتات ورموز الأنماط
+    function cleanPropValue(v) {
+        let s = String(v == null ? '' : v);
+        if (/[<>]/.test(s)) {
+            s = s.replace(/<\s*br\s*\/?>/gi, ' ');
+            s = s.replace(/<\/\s*(td|th|tr|div|p|li|ul|ol|h[1-6]|section|article|table)\s*>/gi, ' ');
+            try {
+                const doc = new DOMParser().parseFromString(s, 'text/html');
+                doc.querySelectorAll('script,style,iframe,object,embed,link,meta').forEach(function (n) { n.remove(); });
+                s = doc.body ? (doc.body.textContent || '') : s.replace(/<[^>]*>/g, ' ');
+            } catch (_) { s = s.replace(/<[^>]*>/g, ' '); }
+        }
+        return s.replace(/\s+/g, ' ').trim();
     }
 
     // استبعاد خصائص النمط/العرض غير المفيدة (fill / stroke-opacity / marker-* ...)
@@ -1328,46 +1325,92 @@
         if (k.indexOf('stroke-') === 0 || k.indexOf('fill-') === 0 || k.indexOf('marker-') === 0) return true;
         return false;
     }
-    function popupPrecision() { try { return appSettings.precision || 6; } catch (_) { return 6; } }
     function prettyKey(k) {
-        const m = { 'name':'الاسم','Name':'الاسم','NAME':'الاسم','الاسم':'الاسم','title':'العنوان','description':'الوصف','Description':'الوصف','desc':'الوصف','type':'النوع','Type':'النوع','category':'التصنيف','class':'التصنيف','elevation':'الارتفاع','ele':'الارتفاع','Elevation':'الارتفاع','length':'الطول','area':'المساحة','code':'الكود','id':'المعرف','ID':'المعرف' };
-        return m[k] || k;
+        const m = {
+            'name': 'الاسم', 'title': 'العنوان', 'description': 'الوصف', 'desc': 'الوصف', 'type': 'النوع',
+            'category': 'التصنيف', 'class': 'التصنيف', 'elevation': 'الارتفاع', 'ele': 'الارتفاع', 'height': 'الارتفاع',
+            'length': 'الطول', 'area': 'المساحة', 'code': 'الكود', 'id': 'المعرّف', 'filename': 'اسم الملف',
+            'file': 'الملف', 'status': 'الحالة', 'material': 'المادة', 'diameter': 'القطر', 'depth': 'العمق',
+            'width': 'العرض', 'source': 'المصدر', 'date': 'التاريخ', 'note': 'ملاحظة', 'notes': 'ملاحظات'
+        };
+        const k2 = String(k).toLowerCase();
+        return m[k2] || k;
     }
 
-    // بناء جدول الخصائص الاحترافي مع تذييل الإحداثيات/UTM
+    // نوع الميزة الهندسي (عربي) + الأيقونة
+    function geomMeta(f) {
+        const t = (f && f.geometry && f.geometry.type) || '';
+        if (t.indexOf('Point') === 0) return { label: 'نقطة', icon: 'fa-location-dot' };
+        if (t.indexOf('Line') === 0) return { label: 'خط', icon: 'fa-route' };
+        if (t.indexOf('Polygon') === 0) return { label: 'مضلع', icon: 'fa-draw-polygon' };
+        return { label: 'عنصر', icon: 'fa-location-dot' };
+    }
+
+    window.closeFeaturePopup = function () { try { map.closePopup(); } catch (_) {} };
+
+    // بناء النافذة المنبثقة: رأس + جدول خصائص ثنائي الأعمدة + تذييل الإحداثيات
     function buildFeaturePopup(f, opts) {
         opts = opts || {};
         const props = (f && f.properties) || {};
-        const title = props['الاسم'] || props.name || props.Name || props.NAME || props.title || opts.title || 'تفاصيل العنصر';
-        let rows = '';
-        Object.keys(props).forEach(function (k) {
-            if (isBoringProp(k)) return;
-            const v = props[k];
-            if (v === null || v === undefined || v === '') return;
-            const isRich = /[<>]/.test(String(v));
-            rows += '<tr><td>' + escapeHtml(prettyKey(k)) + '</td><td' + (isRich ? ' class="rich"' : '') + '>' + sanitizeRich(v) + '</td></tr>';
-        });
-        const head = '<div class="fp-head"><i class="fas ' + (opts.icon || 'fa-location-dot') + '"></i><span>' + escapeHtml(title) + '</span></div>';
-        const table = rows ? '<table class="fp-table">' + rows + '</table>' : '<div class="fp-empty">لا توجد خصائص وصفية</div>';
+        const gm = geomMeta(f);
+        const pr = popupPrecision();
+        const title = opts.title || ('تفاصيل الميزة الوصفية (' + gm.label + ')');
 
-        let foot = '';
+        const rows = [];
+        const shown = {};
+        if (opts.fileName) { rows.push(['اسم الملف', cleanPropValue(opts.fileName)]); }
+        rows.push(['نوع الميزة', gm.label]);
+
+        // الطول الكلي / المساحة الكلية
+        try { const len = featureLengthM(f); if (len) rows.push(['الطول الكلي', formatDistance(len)]); } catch (_) {}
+        try { const area = featureAreaM2(f); if (area) rows.push(['المساحة الكلية', formatArea(area)]); } catch (_) {}
+
+        // الارتفاع إن وُجد ضمن الخصائص
+        Object.keys(props).forEach(function (k) {
+            if (shown[k] || !/^(elevation|ele|height|الارتفاع|depth|العمق)$/i.test(String(k))) return;
+            const v = cleanPropValue(props[k]);
+            if (v) { rows.push(['الارتفاع', v]); shown[k] = 1; }
+        });
+
+        // إحداثيات X / Y (جغرافية)
         let utm = null;
         try { utm = featureUTM(f); } catch (_) {}
-        const pr = popupPrecision();
         if (utm) {
-            foot += '<span><b>X</b>' + Number(utm.repLng).toFixed(pr) + '</span>';
-            foot += '<span><b>Y</b>' + Number(utm.repLat).toFixed(pr) + '</span>';
-            foot += '<span><b>UTM Zone</b>' + utm.zone + utm.hemisphere + '</span>';
-            foot += '<span><b>E</b>' + Math.round(utm.easting) + '</span>';
-            foot += '<span><b>N</b>' + Math.round(utm.northing) + '</span>';
+            rows.push(['إحداثي X (خط الطول)', Number(utm.repLng).toFixed(pr)]);
+            rows.push(['إحداثي Y (خط العرض)', Number(utm.repLat).toFixed(pr)]);
         }
-        try {
-            const len = featureLengthM(f);
-            if (len) foot += '<span><b>الطول</b>' + formatDistance(len) + '</span>';
-            const area = featureAreaM2(f);
-            if (area) foot += '<span><b>المساحة</b>' + formatArea(area) + '</span>';
-        } catch (_) {}
-        const footHtml = foot ? '<div class="fp-foot">' + foot + '</div>' : '';
+
+        // بقية الخصائص الوصفية (نصّية نظيفة، دون أنماط أو تكرار)
+        Object.keys(props).forEach(function (k) {
+            if (shown[k] || isBoringProp(k)) return;
+            const v = cleanPropValue(props[k]);
+            if (v === '') return;
+            rows.push([prettyKey(k), v]);
+        });
+
+        const head = '<div class="fp-head"><i class="fas ' + gm.icon + '"></i><span class="fp-title">' +
+            escapeHtml(title) + '</span><button type="button" class="fp-close" title="إغلاق" ' +
+            'onclick="window.closeFeaturePopup&&window.closeFeaturePopup()">&times;</button></div>';
+
+        const table = rows.length
+            ? '<table class="fp-table">' + rows.map(function (r) {
+                return '<tr><td>' + escapeHtml(r[0]) + '</td><td>' + escapeHtml(r[1]) + '</td></tr>';
+            }).join('') + '</table>'
+            : '<div class="fp-empty">لا توجد خصائص وصفية</div>';
+
+        let footHtml = '';
+        if (utm) {
+            const cells = [
+                ['Latitude', Number(utm.repLat).toFixed(pr)],
+                ['Longitude', Number(utm.repLng).toFixed(pr)],
+                ['UTM Zone', utm.zone + (utm.hemisphere || '')],
+                ['Easting', Math.round(utm.easting)],
+                ['Northing', Math.round(utm.northing)]
+            ].map(function (c) { return '<span><b>' + c[0] + '</b>' + c[1] + '</span>'; }).join('');
+            footHtml = '<div class="fp-foot"><div class="fp-foot-title"><i class="fas fa-crosshairs"></i> الإحداثيات الجغرافية والمُسقطة</div>' +
+                '<div class="fp-foot-grid">' + cells + '</div></div>';
+        }
+
         return '<div class="fp">' + head + table + footHtml + '</div>';
     }
 
@@ -1963,9 +2006,9 @@
     function ensureHighlightLayer() {
         if (!highlightLayer) {
             highlightLayer = L.geoJSON(null, {
-                style: { color: '#f59e0b', weight: 3, fillColor: '#fbbf24', fillOpacity: 0.4 },
+                style: { color: '#f59e0b', weight: 3.5, fillColor: '#fbbf24', fillOpacity: 0.45, className: 'gis-hl' },
                 pointToLayer: function (f, latlng) {
-                    return L.circleMarker(latlng, { radius: 8, color: '#f59e0b', weight: 3, fillColor: '#fde68a', fillOpacity: 0.9 });
+                    return L.circleMarker(latlng, { radius: 9, color: '#f59e0b', weight: 3.5, fillColor: '#fde68a', fillOpacity: 0.95, className: 'gis-hl' });
                 }
             });
             highlightLayer.addTo(map);
@@ -1981,7 +2024,7 @@
             hl.addData(geojson);
             if (fit !== false) {
                 const b = hl.getBounds();
-                if (b && b.isValid()) map.fitBounds(b, { padding: [60, 60], maxZoom: 17 });
+                if (b && b.isValid()) map.fitBounds(b, { padding: [50, 50], maxZoom: 17 });
             }
             if (hl.bringToFront) hl.bringToFront();
         } catch (e) {}
@@ -2020,20 +2063,20 @@
                 const nm = props.name || props.NAME || props.Name || ('عنصر ' + (i + 1));
                 const ds = props.description || props.desc || props.DESCRIPTION || '';
                 return { idx: i + 1, id: null, kindLabel: KIND_TO_AR[k] || '', geojson: ft,
-                         name: String(nm), desc: String(ds), editable: false };
+                         name: cleanPropValue(nm), desc: cleanPropValue(ds), editable: false };
             });
         }
         if (attrSource.type === 'location') {
             const loc = locations.find(function (l) { return l.id === attrSource.id; });
             if (!loc) return [];
             return [{ idx: 1, id: null, kindLabel: 'نقطة', editable: false,
-                      name: loc.name || ('موقع ' + loc.id), desc: loc.desc || '',
+                      name: cleanPropValue(loc.name || ('موقع ' + loc.id)), desc: cleanPropValue(loc.desc || ''),
                       geojson: { type: 'Feature', properties: { name: loc.name, description: loc.desc || '' },
                                  geometry: { type: 'Point', coordinates: [loc.lng, loc.lat] } } }];
         }
         return customFeaturesData.map(function (cf, i) {
             return { idx: i + 1, id: cf.id, kindLabel: ATTR_TYPE_LABEL[cf.kind] || cf.kind, geojson: cf.geojson,
-                     name: cf.name, desc: cf.desc || '', editable: true };
+                     name: cleanPropValue(cf.name), desc: cleanPropValue(cf.desc || ''), editable: true };
         });
     }
 
@@ -2119,20 +2162,26 @@
             });
         });
         wrap.querySelectorAll('tbody tr').forEach(tr => {
-            tr.addEventListener('click', function (ev) {
-                if (ev.target.closest('input,button')) return;
-                const idx = parseInt(this.dataset.row);
+            function markSelected() {
+                const idx = parseInt(tr.dataset.row);
                 const row = window.__attrList[idx];
-                if (!row) return;
+                if (!row) return null;
                 attrSelected = idx;
                 wrap.querySelectorAll('tbody tr').forEach(x => x.classList.remove('dt-selected'));
-                this.classList.add('dt-selected');
-                window.selectFeatureOnMap(row.geojson, false);
+                tr.classList.add('dt-selected');
                 const sel = document.getElementById('dtSelection');
                 if (sel) sel.textContent = 'محدد: ' + row.name;
+                return row;
+            }
+            tr.addEventListener('click', function (ev) {
+                if (ev.target.closest('input,button')) return;
+                const row = markSelected();
+                if (row) window.selectFeatureOnMap(row.geojson, false);
             });
-            tr.addEventListener('dblclick', function () {
-                const row = window.__attrList[parseInt(this.dataset.row)];
+            tr.addEventListener('dblclick', function (ev) {
+                if (ev.target.closest('input,button')) return;
+                ev.preventDefault();
+                const row = markSelected();
                 if (row) window.selectFeatureOnMap(row.geojson, true);
             });
         });
@@ -2784,7 +2833,7 @@
                 return Object.assign({ evenodd: true }, shapeStyleFor(currentFileName, gtype, f));
             },
             onEachFeature: function(f, layer) {
-                layer.bindPopup(buildFeaturePopup(f), { maxWidth: 360, className: 'gis-popup' });
+                layer.bindPopup(buildFeaturePopup(f, { fileName: currentFileName }), { maxWidth: 360, className: 'gis-popup' });
             }
         });
         geoLayer.eachLayer(function (l) {
@@ -2817,7 +2866,7 @@
             if (!isLayerVis('location', loc.id)) return;
             const marker = L.marker([loc.lat, loc.lng], {
                 icon: L.divIcon({ html: `<i class="fas fa-map-pin" style="color:${escapeHtml(loc.color || '#e63946')};font-size:28px;"></i>`, className: '', iconSize: [28,28], iconAnchor: [14,28] })
-            }).bindPopup(buildFeaturePopup({ type: 'Feature', properties: { 'الاسم': loc.name, 'الوصف': loc.desc }, geometry: { type: 'Point', coordinates: [Number(loc.lng), Number(loc.lat)] } }, { icon: 'fa-map-pin' }), { maxWidth: 340, className: 'gis-popup' });
+            }).bindPopup(buildFeaturePopup({ type: 'Feature', properties: { 'الاسم': loc.name, 'الوصف': loc.desc }, geometry: { type: 'Point', coordinates: [Number(loc.lng), Number(loc.lat)] } }), { maxWidth: 340, className: 'gis-popup' });
             marker.addTo(map);
             locationMarkers[i] = marker;
         });
