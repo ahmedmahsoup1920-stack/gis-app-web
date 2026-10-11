@@ -52,19 +52,19 @@
             return out;
         }
         if (scope === 'file' || scope === 'all') {
-            var cd = window.currentData;
+            var cd = (typeof currentData !== 'undefined' ? currentData : null);
             if (cd && Array.isArray(cd.features)) {
-                var nm = window.currentFileName || 'الملف الحالي';
+                var nm = (typeof currentFileName !== 'undefined' && currentFileName) || 'الملف الحالي';
                 cd.features.forEach(function (f) { out.push({ f: f, source: 'file', name: nm }); });
             }
         }
         if (scope === 'custom' || scope === 'all') {
-            (window.customFeaturesData || []).forEach(function (cf) {
+            ((typeof customFeaturesData !== 'undefined' ? customFeaturesData : null) || []).forEach(function (cf) {
                 if (cf && cf.geojson && cf.geojson.geometry) { out.push({ f: cf.geojson, source: 'custom', name: cf.name || 'عنصر' }); }
             });
         }
         if (scope === 'locations' || scope === 'all') {
-            (window.locations || []).forEach(function (loc) {
+            (typeof locations !== 'undefined' ? locations : []).forEach(function (loc) {
                 if (loc && !isNaN(loc.lat) && !isNaN(loc.lng)) { out.push({ f: locationFeature(loc), source: 'location', name: loc.name || 'موقع' }); }
             });
         }
@@ -133,7 +133,7 @@
             drawStyle.stroke = saved.stroke; drawStyle.fill = saved.fill; drawStyle.weight = saved.weight; drawStyle.fillOpacity = saved.fillOpacity;
         }
         // العنصر المُضاف هو الأخير في customFeaturesData
-        var cf = (window.customFeaturesData || [])[window.customFeaturesData.length - 1];
+        var cf = ((typeof customFeaturesData !== 'undefined' ? customFeaturesData : null) || [])[(typeof customFeaturesData !== 'undefined' ? customFeaturesData : null).length - 1];
         if (cf) {
             cf.color = opts.color || '#7c3aed';
             cf.fillColor = opts.fill || opts.color || '#7c3aed';
@@ -144,7 +144,7 @@
     }
 
     function removeCustomById(id) {
-        var arr = window.customFeaturesData || [];
+        var arr = (typeof customFeaturesData !== 'undefined' ? customFeaturesData : null) || [];
         var i = arr.findIndex(function (c) { return c.id === id; });
         if (i < 0) { return false; }
         var cf = arr[i];
