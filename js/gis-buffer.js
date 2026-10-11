@@ -24,32 +24,32 @@
             var html =
                 '<div data-f="scope"></div>' +
                 '<div data-f="dist"></div>' +
-                '<button type="button" data-act="run" style="' + U.btnStyle + '"><i class="fas fa-play"></i> إنشاء النطاق العازل</button>' +
+                '<button type="button" data-act="run" style="' + U.btnStyle + '"><i class="fas fa-play"></i> Create Buffer</button>' +
                 '<div data-f="out" style="margin-top:12px"></div>';
 
             root.innerHTML = html;
 
             var scopeSel = U.el('select', { style: U.selectStyle }, U.options([
-                { value: 'selected', label: 'العناصر المحدّدة (تحديد مستطيل)' },
-                { value: 'file', label: 'الملف الحالي' },
-                { value: 'custom', label: 'العناصر المخصصة' },
-                { value: 'locations', label: 'المواقع المحفوظة' },
-                { value: 'all', label: 'الكل (ملف + مخصص + مواقع)', sel: true }
+                { value: 'active', label: 'Active Layer / Selected Feature (User Drawings)', sel: true },
+                { value: 'drawings', label: 'User Drawings Only' },
+                { value: 'file', label: 'Current File Layer' },
+                { value: 'locations', label: 'Saved Locations' },
+                { value: 'all', label: 'All Layers' }
             ]));
             var scopeWrap = root.querySelector('[data-f="scope"]');
-            scopeWrap.innerHTML = '<label style="font-size:11.5px;color:var(--txt-dim,#94a3b8);display:block;margin-bottom:4px;">المصدر</label>';
+            scopeWrap.innerHTML = '<label style="font-size:11.5px;color:var(--txt-dim,#94a3b8);display:block;margin-bottom:4px;">Source Layer</label>';
             scopeWrap.appendChild(scopeSel);
 
             var distWrap = root.querySelector('[data-f="dist"]');
             var dist = U.el('input', { type: 'number', value: '100', min: '1', step: 'any', style: U.inputStyle });
             var unit = U.el('select', { style: U.selectStyle }, U.options([
-                { value: 'm', label: 'متر', sel: true },
-                { value: 'km', label: 'كيلومتر' },
-                { value: 'ft', label: 'قدم' }
+                { value: 'm', label: 'Meters', sel: true },
+                { value: 'km', label: 'Kilometers' },
+                { value: 'ft', label: 'Feet' }
             ]));
             distWrap.innerHTML = '<div style="display:flex;gap:8px;margin-top:8px;">' +
-                '<div style="flex:2"><label style="font-size:11.5px;color:var(--txt-dim,#94a3b8)">المسافة</label></div>' +
-                '<div style="flex:1"><label style="font-size:11.5px;color:var(--txt-dim,#94a3b8)">الوحدة</label></div></div>';
+                '<div style="flex:2"><label style="font-size:11.5px;color:var(--txt-dim,#94a3b8)">Distance</label></div>' +
+                '<div style="flex:1"><label style="font-size:11.5px;color:var(--txt-dim,#94a3b8)">Unit</label></div></div>';
             var r2 = U.el('div', { style: 'display:flex;gap:8px;margin-top:4px;' });
             r2.appendChild(dist); r2.appendChild(unit);
             distWrap.appendChild(r2);
@@ -59,9 +59,12 @@
             function run() {
                 if (!turfReady(ctx)) { return; }
                 var feats = U.sourceFeatures(scopeSel.value);
-                if (!feats.length) { ctx.notify('لا توجد عناصر في المصدر المحدّد', 'warn'); return; }
+                if (!feats.length) {
+                    ctx.notify(scopeSel.value === 'active' ? 'Select a feature on the map to analyze' : 'No features found in the selected source', 'warn');
+                    return;
+                }
                 var meters = U.toMeters(dist.value, unit.value);
-                if (meters <= 0) { ctx.notify('أدخل مسافة صحيحة', 'warn'); return; }
+                if (meters <= 0) { ctx.notify('Enter a valid distance', 'warn'); return; }
 
                 var buffered = [], failed = 0;
                 feats.forEach(function (o) {
@@ -101,25 +104,25 @@
                         hits.map(function (n, idx) {
                             return '<div style="padding:6px 9px;font-size:12px;border-bottom:1px solid rgba(148,163,184,.15)">' + (idx + 1) + '. ' + ctx.escapeHtml(n) + '</div>';
                         }).join('') + '</div>'
-                    : '<div style="color:var(--txt-dim,#94a3b8);font-size:12px">لا توجد عناصر داخل النطاق.</div>';
+                    : '<div style="color:var(--txt-dim,#94a3b8);font-size:12px">No features inside the buffer.</div>';
 
                 out.innerHTML =
                     '<div style="background:var(--card-bg,#1e293b);border:1px solid var(--card-brd,#334155);border-radius:10px;padding:10px;">' +
-                    '<div style="font-weight:800;margin-bottom:4px"><i class="fas fa-circle-check" style="color:#22c55e"></i> تم إنشاء النطاق</div>' +
-                    '<div style="font-size:12px">المساحة: <b>' + ctx.escapeHtml(U.fmtArea(area)) + '</b></div>' +
-                    '<div style="font-size:12px">عناصر متقاطعة: <b>' + hits.length + '</b>' + (failed ? ' — فشل: ' + failed : '') + '</div>' +
+                    '<div style="font-weight:800;margin-bottom:4px"><i class="fas fa-circle-check" style="color:#22c55e"></i> Buffer Created</div>' +
+                    '<div style="font-size:12px">Area: <b>' + ctx.escapeHtml(U.fmtArea(area)) + '</b></div>' +
+                    '<div style="font-size:12px">Intersecting features: <b>' + hits.length + '</b>' + (failed ? ' — failed: ' + failed : '') + '</div>' +
                     listHtml +
-                    (cf ? '<button type="button" data-act="remove" style="' + U.btn2Style + ';margin-top:10px;width:100%;border-color:#ef4444;color:#fca5a5"><i class="fas fa-trash"></i> حذف النتيجة</button>' : '') +
+                    (cf ? '<button type="button" data-act="remove" style="' + U.btn2Style + ';margin-top:10px;width:100%;border-color:#ef4444;color:#fca5a5"><i class="fas fa-trash"></i> Delete Result</button>' : '') +
                     '</div>';
 
                 if (cf) {
                     out.querySelector('[data-act="remove"]').addEventListener('click', function () {
                         U.removeCustomById(cf.id);
-                        out.innerHTML = '<div style="color:var(--txt-dim,#94a3b8);font-size:12px">تم حذف النطاق.</div>';
-                        ctx.notify('تم حذف النطاق العازل', 'info');
+                        out.innerHTML = '<div style="color:var(--txt-dim,#94a3b8);font-size:12px">Buffer deleted.</div>';
+                        ctx.notify('Buffer deleted', 'info');
                     });
                 }
-                ctx.notify('تم إنشاء النطاق العازل (' + hits.length + ' متقاطع)', 'success');
+                ctx.notify('Buffer created (' + hits.length + ' intersecting)', 'success');
             }
 
             root.querySelector('[data-act="run"]').addEventListener('click', run);
