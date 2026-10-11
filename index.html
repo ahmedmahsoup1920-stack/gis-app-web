@@ -1033,7 +1033,7 @@
     // ================================================================
     //  الإعدادات الأساسية
     // ================================================================
-    const map = L.map('map', { center: [31.236, 44.366], zoom: 11, zoomControl: false });
+    const map = L.map('map', { center: [21.543333, 39.172778], zoom: 13, zoomControl: false });
     // ترتيب طبقات الرسم: المضلعات (أسفل) ← الخطوط ← النقاط (أعلى)
     map.createPane('gisPolyPane').style.zIndex = 402;
     map.createPane('gisLinePane').style.zIndex = 404;
@@ -1536,6 +1536,15 @@
         applyCustomFeatureStyle(customFeaturesData[customFeaturesData.length - 1]);
         renderCustomFeatures();
         updateTOC();
+        // تقريب فوري على العنصر المرسوم مباشرة
+        try {
+            if (layer.getBounds) {
+                const b = layer.getBounds();
+                if (b.isValid()) map.fitBounds(b, { padding: [50, 50], maxZoom: 17, animate: true });
+            } else if (layer.getLatLng) {
+                map.setView(layer.getLatLng(), 17, { animate: true });
+            }
+        } catch (e) {}
     }
 
     function renderCustomFeatures() {
@@ -1562,8 +1571,8 @@
                 const cf = customFeaturesData.find(x => x.id === id);
                 if (!cf) return;
                 try {
-                    if (cf.layer.getBounds) map.fitBounds(cf.layer.getBounds(), { maxZoom: 16, padding: [40,40] });
-                    else if (cf.layer.getLatLng) map.flyTo(cf.layer.getLatLng(), 15, { duration: 1 });
+                    if (cf.layer.getBounds) map.fitBounds(cf.layer.getBounds(), { maxZoom: 17, padding: [50, 50], animate: true });
+                    else if (cf.layer.getLatLng) map.setView(cf.layer.getLatLng(), 17, { animate: true });
                 } catch(err) {}
             });
         });
@@ -2942,7 +2951,8 @@
 
         try {
             const b = geoLayer.getBounds();
-            if (b.isValid()) map.fitBounds(b, {padding:[40,40], maxZoom:18});
+            if (b.isValid()) map.fitBounds(b, { padding: [50, 50], maxZoom: 17, animate: true });
+            else map.setView([21.543333, 39.172778], 13, { animate: true });
         } catch (_) {}
         document.getElementById('loader').style.display = 'none';
         applyStoredVisibility();
@@ -3525,19 +3535,19 @@
             try {
                 const g = L.geoJSON({ type: 'FeatureCollection', features: feats });
                 const b = g.getBounds();
-                if (b.isValid()) map.fitBounds(b, { padding: [50,50], maxZoom: 18 });
+                if (b.isValid()) map.fitBounds(b, { padding: [50, 50], maxZoom: 18, animate: true });
             } catch(_) {}
         } else if (type === 'custom') {
             const cf = customFeaturesData.find(c => c.id === id);
             if (cf) {
                 try {
-                    if (cf.layer.getBounds) map.fitBounds(cf.layer.getBounds(), { maxZoom: 16, padding: [40,40] });
-                    else if (cf.layer.getLatLng) map.flyTo(cf.layer.getLatLng(), 15, { duration: 1 });
+                    if (cf.layer.getBounds) map.fitBounds(cf.layer.getBounds(), { maxZoom: 18, padding: [50, 50], animate: true });
+                    else if (cf.layer.getLatLng) map.setView(cf.layer.getLatLng(), 18, { animate: true });
                 } catch(err) {}
             }
         } else if (type === 'location') {
             const loc = locations.find(l => l.id === id);
-            if (loc) map.flyTo([loc.lat, loc.lng], 15, { duration: 1.2 });
+            if (loc) map.setView([loc.lat, loc.lng], 18, { animate: true });
         }
     };
 
@@ -4389,9 +4399,12 @@
     // ================================================================
     document.getElementById('resetBtn').addEventListener('click', function() {
         if (geoLayer) {
-            try { const b = geoLayer.getBounds(); if (b.isValid()) { map.fitBounds(b, { padding: [40,40] }); return; } } catch(e) {}
+            try {
+                const b = geoLayer.getBounds();
+                if (b.isValid()) { map.fitBounds(b, { padding: [50, 50], maxZoom: 17, animate: true }); return; }
+            } catch(e) {}
         }
-        map.setView([31.236, 44.366], 11);
+        map.setView([21.543333, 39.172778], 13, { animate: true });
     });
 
     document.getElementById('clearBtn').addEventListener('click', function() {
@@ -5210,12 +5223,13 @@ const items = [
             });
 
             // دوبل كليك على الصف = فتح جدول البيانات الوصفية
+            // نقر مزدوج على صف الطبقة = تكبير قريب مباشر على الهندسة
             body.addEventListener('dblclick', (e) => {
                 if (e.target.closest('input,button')) return;
                 const row = e.target.closest('.advtoc-layer');
                 if (!row) return;
                 e.preventDefault();
-                openLayerTable(readRow(row));
+                try { zoomLayer(readRow(row)); } catch (err) { console.warn(err); }
             });
         }
 
