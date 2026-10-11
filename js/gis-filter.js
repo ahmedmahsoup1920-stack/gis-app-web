@@ -14,34 +14,25 @@
     }
 
     function targetFeatures(scope) {
-        var out = [];
-        if (scope === 'file' || scope === 'all') {
-            var gl = (typeof geoLayer !== 'undefined' ? geoLayer : null);
-            if (gl && gl.eachLayer) {
-                gl.eachLayer(function (l) {
-                    if (l.feature) { out.push({ f: l.feature, layer: l, source: 'file', name: (l.feature.properties && l.feature.properties.name) || '' }); }
-                });
-            }
-        }
-        if (scope === 'custom' || scope === 'all') {
-            ((typeof customFeaturesData !== 'undefined' ? customFeaturesData : null) || []).forEach(function (cf) {
-                if (cf.geojson && cf.geojson.geometry) out.push({ f: cf.geojson, layer: cf.layer, source: 'custom', name: cf.name || '' });
-            });
-        }
-        return out;
+        return U.sourceFeatures(scope).map(function (o) {
+            return {
+                f: o.f, layer: o.layer, source: o.source,
+                name: o.name || (o.f.properties && (o.f.properties.name || o.f.properties.id)) || ''
+            };
+        });
     }
 
     var OPS = [
-        { value: '=', label: 'يساوي' },
-        { value: '!=', label: 'لا يساوي' },
-        { value: '>', label: 'أكبر من' },
-        { value: '>=', label: 'أكبر أو يساوي' },
-        { value: '<', label: 'أصغر من' },
-        { value: '<=', label: 'أصغر أو يساوي' },
-        { value: 'contains', label: 'يحتوي على' },
-        { value: 'startswith', label: 'يبدأ بـ' },
-        { value: 'empty', label: 'فارغ' },
-        { value: 'notempty', label: 'غير فارغ' }
+        { value: '=', label: 'Equals' },
+        { value: '!=', label: 'Not equal' },
+        { value: '>', label: 'Greater than' },
+        { value: '>=', label: 'Greater or equal' },
+        { value: '<', label: 'Less than' },
+        { value: '<=', label: 'Less or equal' },
+        { value: 'contains', label: 'Contains' },
+        { value: 'startswith', label: 'Starts with' },
+        { value: 'empty', label: 'Empty' },
+        { value: 'notempty', label: 'Not empty' }
     ];
 
     function evalCond(f, c) {
@@ -75,19 +66,20 @@
                 '<div data-f="scope"></div>' +
                 '<div data-f="conds" style="margin-top:10px"></div>' +
                 '<div style="display:flex;gap:8px;margin-top:8px">' +
-                  '<button type="button" data-act="add" style="' + U.btn2Style + ';flex:1"><i class="fas fa-plus"></i> إضافة شرط</button>' +
-                  '<button type="button" data-act="clear" style="' + U.btn2Style + ';flex:1"><i class="fas fa-eraser"></i> مسح</button>' +
+                  '<button type="button" data-act="add" style="' + U.btn2Style + ';flex:1"><i class="fas fa-plus"></i> Add Condition</button>' +
+                  '<button type="button" data-act="clear" style="' + U.btn2Style + ';flex:1"><i class="fas fa-eraser"></i> Clear</button>' +
                 '</div>' +
-                '<button type="button" data-act="run" style="' + U.btnStyle + '"><i class="fas fa-magnifying-glass"></i> تطبيق الفلترة</button>' +
+                '<button type="button" data-act="run" style="' + U.btnStyle + '"><i class="fas fa-magnifying-glass"></i> Apply Filter</button>' +
                 '<div data-f="out" style="margin-top:12px"></div>';
 
             var scopeSel = U.el('select', { style: U.selectStyle }, U.options([
-                { value: 'file', label: 'الملف الحالي', sel: true },
-                { value: 'custom', label: 'العناصر المخصصة' },
-                { value: 'all', label: 'الكل' }
+                { value: 'active', label: 'Active Layer / Selected Feature (User Drawings)', sel: true },
+                { value: 'drawings', label: 'User Drawings Only' },
+                { value: 'file', label: 'Current File Layer' },
+                { value: 'all', label: 'All Layers' }
             ]));
             var scopeWrap = root.querySelector('[data-f="scope"]');
-            scopeWrap.innerHTML = '<label style="font-size:11.5px;color:var(--txt-dim,#94a3b8);display:block;margin-bottom:4px;">الطبقة المستهدفة</label>';
+            scopeWrap.innerHTML = '<label style="font-size:11.5px;color:var(--txt-dim,#94a3b8);display:block;margin-bottom:4px;">Target Layer</label>';
             scopeWrap.appendChild(scopeSel);
 
             var condsWrap = root.querySelector('[data-f="conds"]');
@@ -100,11 +92,11 @@
 
             function addCondRow() {
                 var fields = currentFields();
-                if (!fields.length) { ctx.notify('لا توجد حقول في الطبقة المستهدفة', 'warn'); return; }
+                if (!fields.length) { ctx.notify('No fields in the target layer', 'warn'); return; }
                 var row = U.el('div', { style: 'display:flex;gap:6px;margin-bottom:6px;align-items:center;' });
                 var fSel = U.el('select', { style: U.inputStyle + ';flex:1.2' }, U.options(fields));
                 var oSel = U.el('select', { style: U.inputStyle + ';flex:1' }, U.options(OPS));
-                var vInput = U.el('input', { type: 'text', placeholder: 'القيمة', style: U.inputStyle + ';flex:1' });
+                var vInput = U.el('input', { type: 'text', placeholder: 'Value', style: U.inputStyle + ';flex:1' });
                 var del = U.el('button', { type: 'button', style: U.btn2Style + ';padding:6px 9px;color:#fca5a5;border-color:#ef4444' }, '<i class="fas fa-times"></i>');
                 function syncVal() { var dis = (oSel.value === 'empty' || oSel.value === 'notempty'); vInput.style.display = dis ? 'none' : ''; }
                 oSel.addEventListener('change', syncVal);
@@ -127,9 +119,12 @@
 
             function run() {
                 var feats = targetFeatures(scopeSel.value);
-                if (!feats.length) { ctx.notify('الطبقة فارغة', 'warn'); return; }
+                if (!feats.length) {
+                    ctx.notify(scopeSel.value === 'active' ? 'Select a feature on the map to analyze' : 'The target layer is empty', 'warn');
+                    return;
+                }
                 var conds = readConds();
-                if (!conds.length) { ctx.notify('أضف شرطًا واحدًا على الأقل', 'warn'); return; }
+                if (!conds.length) { ctx.notify('Add at least one condition', 'warn'); return; }
                 var matched = feats.filter(function (o) {
                     return conds.every(function (c) { return evalCond(o.f, c); });
                 });
@@ -149,16 +144,16 @@
 
                 out.innerHTML =
                     '<div style="background:var(--card-bg,#1e293b);border:1px solid var(--card-brd,#334155);border-radius:10px;padding:10px;">' +
-                    '<div style="font-weight:800;margin-bottom:4px"><i class="fas fa-circle-check" style="color:#22c55e"></i> نتيجة الفلترة</div>' +
-                    '<div style="font-size:12.5px">المطابق: <b>' + matched.length + '</b> من ' + feats.length + '</div>' +
+                    '<div style="font-weight:800;margin-bottom:4px"><i class="fas fa-circle-check" style="color:#22c55e"></i> Filter Result</div>' +
+                    '<div style="font-size:12.5px">Matched: <b>' + matched.length + '</b> of ' + feats.length + '</div>' +
                     (matched.length ? '<div style="margin-top:6px;max-height:200px;overflow:auto;border:1px solid var(--card-brd,#334155);border-radius:8px">' + names + '</div>' : '') +
-                    '<button type="button" data-act="unhl" style="' + U.btn2Style + ';margin-top:10px;width:100%"><i class="fas fa-eye-slash"></i> إزالة الإبراز</button>' +
+                    '<button type="button" data-act="unhl" style="' + U.btn2Style + ';margin-top:10px;width:100%"><i class="fas fa-eye-slash"></i> Clear Highlight</button>' +
                     '</div>';
                 out.querySelector('[data-act="unhl"]').addEventListener('click', function () {
                     clearHl(); window.__selectedFeatures = { type: 'FeatureCollection', features: [] };
-                    out.innerHTML = '<div style="color:var(--txt-dim,#94a3b8);font-size:12px">تم إزالة الإبراز.</div>';
+                    out.innerHTML = '<div style="color:var(--txt-dim,#94a3b8);font-size:12px">Highlight cleared.</div>';
                 });
-                ctx.notify('تم العثور على ' + matched.length + ' عنصر مطابق', 'success');
+                ctx.notify('Found ' + matched.length + ' matching feature(s)', 'success');
             }
 
             addCondRow();
