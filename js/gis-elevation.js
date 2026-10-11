@@ -69,20 +69,24 @@
         mount: function (root, ctx) {
             root.innerHTML =
                 '<div data-f="line" style="margin-bottom:8px"></div>' +
-                '<label style="display:block;font-size:11.5px;color:var(--txt-dim,#94a3b8)">عدد نقاط القياس</label>' +
+                '<label style="display:block;font-size:11.5px;color:var(--txt-dim,#94a3b8)">Sample Points</label>' +
                 '<input data-f="n" type="number" value="80" min="10" max="400" style="' + U.inputStyle + '">' +
-                '<button type="button" data-act="run" style="' + U.btnStyle + '"><i class="fas fa-chart-area"></i> رسم المقطع</button>' +
+                '<button type="button" data-act="run" style="' + U.btnStyle + '"><i class="fas fa-chart-area"></i> Draw Profile</button>' +
                 '<div data-f="out" style="margin-top:12px"></div>';
 
             var lineSel = U.el('select', { style: U.selectStyle });
             var lw = root.querySelector('[data-f="line"]');
-            lw.innerHTML = '<label style="font-size:11.5px;color:var(--txt-dim,#94a3b8);display:block;margin-bottom:4px;">العنصر الخطي</label>';
+            lw.innerHTML = '<label style="font-size:11.5px;color:var(--txt-dim,#94a3b8);display:block;margin-bottom:4px;">Line / Polygon Feature (User Drawings)</label>';
             lw.appendChild(lineSel);
             var out = root.querySelector('[data-f="out"]');
 
+            function pickLines() {
+                return U.sourceFeatures('drawings').filter(function (o) { return U.geomType(o.f) === 'line' || U.geomType(o.f) === 'polygon'; });
+            }
             function fillLines() {
-                var list = U.sourceFeatures('all').filter(function (o) { return U.geomType(o.f) === 'line' || U.geomType(o.f) === 'polygon'; });
-                lineSel.innerHTML = list.map(function (o, i) { return '<option value="' + i + '">' + ctx.escapeHtml((o.name || 'عنصر') + ' [' + U.geomType(o.f) + ']') + '</option>'; }).join('') || '<option value="">— لا عناصر —</option>';
+                var list = pickLines();
+                if (!list.length) { list = U.sourceFeatures('all').filter(function (o) { return U.geomType(o.f) === 'line' || U.geomType(o.f) === 'polygon'; }); }
+                lineSel.innerHTML = list.map(function (o, i) { return '<option value="' + i + '">' + ctx.escapeHtml((o.name || 'Feature') + ' [' + U.geomType(o.f) + ']') + '</option>'; }).join('') || '<option value="">— No features —</option>';
                 lineSel._list = list;
             }
             fillLines();
@@ -90,7 +94,7 @@
             function run() {
                 var list = lineSel._list || [];
                 var item = list[Number(lineSel.value)];
-                if (!item) { ctx.notify('اختر عنصرًا أولاً', 'warn'); return; }
+                if (!item) { ctx.notify('Select a feature on the map to analyze', 'warn'); return; }
                 var coords = lineCoords(item.f);
                 if (!coords || coords.length < 2) { ctx.notify('العنصر لا يحتوي على خط صالح', 'warn'); return; }
                 var n = Math.max(10, Math.min(400, parseInt(root.querySelector('[data-f="n"]').value, 10) || 80));
