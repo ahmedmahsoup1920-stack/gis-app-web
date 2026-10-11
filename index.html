@@ -227,6 +227,9 @@
         .advtoc-name small { display:block; font-size:10.5px; color:#8fa3b6; margin-top:1px; font-weight:400; }
         .advtoc-menu-btn { background:transparent; border:none; color:#8fa3b6; width:26px; height:26px; border-radius:7px; cursor:pointer; flex-shrink:0; }
         .advtoc-menu-btn:hover { background:rgba(255,255,255,.14); color:#fff; }
+        .advtoc-del-btn { background:transparent; border:none; color:#ef4444; width:26px; height:26px; border-radius:7px; cursor:pointer; flex-shrink:0; font-size:13px; line-height:1; transition:background .15s,color .15s; }
+        .advtoc-del-btn:hover { background:rgba(239,68,68,.22); color:#ff6b6b; }
+        .advtoc-del-btn:active { transform:scale(.9); }
         .advtoc-op { width:58px; flex-shrink:0; height:4px; -webkit-appearance:none; appearance:none; background:rgba(255,255,255,.22); border-radius:3px; cursor:pointer; }
         .advtoc-op::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:#14b8ae; box-shadow:0 0 0 3px rgba(20,184,174,.25); }
         .advtoc-op.flash { outline:2px solid #14b8ae; outline-offset:3px; }
@@ -415,7 +418,7 @@
         .fp-foot-grid b { color:#10b981; font-weight:700; margin-inline-end:5px; }
         /* ===== نبض تمييز العنصر المحدد على الخريطة ===== */
         @keyframes gisHlPulse { 0%,100%{ stroke-opacity:1; } 50%{ stroke-opacity:.3; } }
-        .gis-hl { animation: gisHlPulse 1.2s ease-in-out infinite; }
+        .gis-hl { animation: gisHlPulse 1.2s ease-in-out infinite; filter: drop-shadow(0 0 6px #f59e0b) drop-shadow(0 0 3px #fbbf24); }
         /* ===== لوحة التحكم بالطبقة (منبثقة) ===== */
         .control-panel-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:3000; justify-content:center; align-items:center; }
         .control-panel-overlay.active { display:flex; }
@@ -765,8 +768,8 @@
                 </div>
                 <div class="upload-area" id="uploadArea">
                     <button type="button" class="upload-btn" id="uploadBtn"><i class="fas fa-upload"></i> رفع ملف جديد</button>
-                    <input type="file" id="fileInput" accept=".geojson,.json,.kml,.kmz,.dxf,.zip,.shp,.shx,.dbf,.prj" multiple style="display:none" />
-                    <div class="upload-hint"><i class="fas fa-info-circle"></i> GeoJSON · KML/KMZ · Shapefile (zip) · DXF</div>
+                    <input type="file" id="fileInput" accept=".geojson,.json,.kml,.kmz,.dxf,.dwg,.zip,.shp,.shx,.dbf,.prj" multiple style="display:none" />
+                    <div class="upload-hint"><i class="fas fa-info-circle"></i> GeoJSON · KML/KMZ · Shapefile (zip) · DXF · DWG→DXF</div>
                     <div class="save-row">
                         <button type="button" class="save-btn" id="saveDataBtn" title="تنزيل حفظ نسخة على جهازك"><i class="fas fa-save"></i> حفظ على الجهاز</button>
                         <button type="button" class="export-btn" id="importDataBtn" style="flex:1;" title="فتح ملف محفوظ من جهازك"><i class="fas fa-folder-open"></i> استيراد</button>
@@ -957,6 +960,22 @@
     </div>
 </div>
 
+<!-- نافذة تنبيه صيغة DWG غير المدعومة -->
+<div class="modal-overlay" id="dwgNoticeModal">
+    <div class="modal">
+        <h3><i class="fas fa-triangle-exclamation" style="color:#f59e0b;"></i> صيغة DWG غير مدعومة</h3>
+        <p style="color:#475569;line-height:1.9;font-size:13.5px;">
+            ملفات <b>DWG</b> ملفات ثنائية مغلقة ولا يمكن قراءتها مباشرة.<br>
+            يُرجى حفظ الملف بصيغة <b>DXF</b> من أوتوكاد
+            (<span dir="ltr">Save As &rarr; DXF</span>) أو رفعه كمضغوط
+            <b>Shapefile (.zip)</b> ليُقرأ مباشرة.
+        </p>
+        <div class="modal-actions">
+            <button class="save-btn" id="dwgNoticeOk">فهمت</button>
+        </div>
+    </div>
+</div>
+
 <!-- نافذة تسمية العنصر المرسوم -->
 <div class="modal-overlay" id="featureNameModal">
     <div class="modal">
@@ -1002,6 +1021,7 @@
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://unpkg.com/shapefile@0.6.6/dist/shapefile.min.js"></script>
+<script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/togeojson/0.16.0/togeojson.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.15.0/proj4.js"></script>
@@ -2016,18 +2036,92 @@
         return highlightLayer;
     }
 
+    function coordsAreProjected(coords) {
+        let found = null;
+        (function walk(c) {
+            if (found || !Array.isArray(c)) return;
+            if (c.length >= 2 && isFinite(Number(c[0])) && isFinite(Number(c[1]))) { found = [Number(c[0]), Number(c[1])]; return; }
+            for (let i = 0; i < c.length && !found; i++) walk(c[i]);
+        })(coords);
+        if (!found) return false;
+        return Math.abs(found[0]) > 180 || Math.abs(found[1]) > 90;
+    }
+
+    window.resolveUtmRef = function (geojson) {
+        const p = (geojson && geojson.properties) || {};
+        let zone = parseInt(p.utm_zone, 10);
+        if (!isFinite(zone) || zone < 1 || zone > 60) zone = parseInt(window.__defaultUtmZone, 10);
+        if (!isFinite(zone) || zone < 1 || zone > 60) {
+            try { zone = (typeof appSettings !== 'undefined' && appSettings && appSettings.utmZone) || 37; }
+            catch (e) { zone = 37; }
+        }
+        const hemisphere = (String(p.utm_hemisphere).toUpperCase() === 'S') ? 'S' : 'N';
+        return { zone: zone, hemisphere: hemisphere };
+    };
+
+    function projectedCoordsToWgs84(coords, ref) {
+        if (!Array.isArray(coords)) return coords;
+        if (coords.length >= 2 && isFinite(Number(coords[0])) && isFinite(Number(coords[1]))) {
+            const r = utmToWgs84(Number(coords[0]), Number(coords[1]), ref.zone, ref.hemisphere);
+            const rest = coords.slice(2).filter(n => isFinite(Number(n)));
+            return [r.lng, r.lat].concat(rest);
+        }
+        return coords.map(c => projectedCoordsToWgs84(c, ref));
+    }
+
+    window.toWgs84Feature = function (geojson) {
+        if (!geojson || !geojson.geometry || !geojson.geometry.coordinates) return geojson;
+        if (!coordsAreProjected(geojson.geometry.coordinates)) return geojson;
+        const ref = window.resolveUtmRef(geojson);
+        return {
+            type: 'Feature',
+            properties: Object.assign({}, geojson.properties),
+            geometry: { type: geojson.geometry.type, coordinates: projectedCoordsToWgs84(geojson.geometry.coordinates, ref) }
+        };
+    };
+
+    // تحويل Feature/FeatureCollection بإحداثيات مسقطة إلى WGS84 (يعدّل في المكان ويوسم UTM)
+    window.convertProjectedGeoJSON = function (fc, ref) {
+        if (!fc) return fc;
+        ref = ref || window.resolveUtmRef(fc);
+        const list = (fc.type === 'FeatureCollection') ? (fc.features || []) : [fc];
+        list.forEach(function (f) {
+            if (!f) return;
+            if (f.geometry && f.geometry.coordinates) f.geometry.coordinates = projectedCoordsToWgs84(f.geometry.coordinates, ref);
+            f.properties = f.properties || {};
+            if (f.properties.utm_zone == null) f.properties.utm_zone = ref.zone;
+            if (f.properties.utm_hemisphere == null) f.properties.utm_hemisphere = ref.hemisphere;
+        });
+        if (fc.crs) delete fc.crs;
+        return fc;
+    };
+
     window.selectFeatureOnMap = function (geojson, fit) {
-        if (!geojson) return;
-        try {
-            const hl = ensureHighlightLayer();
-            hl.clearLayers();
-            hl.addData(geojson);
-            if (fit !== false) {
-                const b = hl.getBounds();
-                if (b && b.isValid()) map.fitBounds(b, { padding: [50, 50], maxZoom: 17 });
+        if (!geojson || !geojson.geometry || !geojson.geometry.coordinates) return;
+        let gg;
+        try { gg = window.toWgs84Feature(geojson); } catch (e) { gg = geojson; }
+        const g = gg.geometry;
+        const hl = ensureHighlightLayer();
+        hl.clearLayers();
+        try { hl.addData(gg); } catch (e) { return; }
+        const verts = featureVerticesLatLng(gg).filter(v => isFinite(v[0]) && isFinite(v[1]) && !(Math.abs(v[0]) < 1e-9 && Math.abs(v[1]) < 1e-9));
+        if (!verts.length) { showSaveStatus('إحداثيات العنصر غير صالحة (0,0) أو غير رقمية — لا يمكن التكبير', true); return; }
+        if (hl.bringToFront) hl.bringToFront();
+        if (fit === false) return;
+        const gt = g.type;
+        if (gt === 'Point' || gt === 'MultiPoint') {
+            const c = (gt === 'Point') ? g.coordinates : (g.coordinates && g.coordinates[0]);
+            if (Array.isArray(c)) {
+                const lng = Number(c[0]), lat = Number(c[1]);
+                if (isFinite(lat) && isFinite(lng) && !(Math.abs(lat) < 1e-9 && Math.abs(lng) < 1e-9)) {
+                    map.setView([lat, lng], 18, { animate: true });
+                }
             }
-            if (hl.bringToFront) hl.bringToFront();
-        } catch (e) {}
+            return;
+        }
+        let b = null;
+        try { b = hl.getBounds(); } catch (e) { b = null; }
+        if (b && b.isValid()) map.fitBounds(b, { padding: [100, 100], maxZoom: 18, animate: true });
     };
     window.clearFeatureHighlight = function () { if (highlightLayer) highlightLayer.clearLayers(); };
 
@@ -3042,14 +3136,25 @@
             } else if (ext === 'geojson' || ext === 'json') {
                 const text = await file.text();
                 geojson = JSON.parse(text);
+            } else if (ext === 'dwg') {
+                loader.style.display = 'none';
+                showDwgNotice();
+                return;
             } else {
                 throw new Error(`صيغة غير مدعومة: .${ext}`);
             }
 
             geojson = normalizeFeatureCollection(geojson, displayName);
-            if (geojson._warning === 'DXF_COORDINATES_NOT_WGS84') {
+            // كشف الإحداثيات المسقطة (UTM) وتحويلها إلى WGS84 ليظهر الملف ويزوّم على موقعه الصحيح
+            const probe = findFirstCoordinate(geojson.features[0] && geojson.features[0].geometry && geojson.features[0].geometry.coordinates);
+            const projected = probe && (Math.abs(probe[0]) > 180 || Math.abs(probe[1]) > 90);
+            if (projected) {
+                const ref = window.resolveUtmRef({ properties: {} });
+                geojson = window.convertProjectedGeoJSON(geojson, ref);
                 delete geojson._warning;
-                alert('⚠️ تم قراءة DXF، لكن إحداثياته لا تبدو Longitude/Latitude. لازم يكون للـDXF مرجع مكاني معروف لكي يتطابق مع الخريطة.');
+                showSaveStatus('تم تحويل الإحداثيات المسقطة (UTM ' + ref.zone + ref.hemisphere + ') إلى WGS84 تلقائياً');
+            } else if (geojson._warning === 'DXF_COORDINATES_NOT_WGS84') {
+                delete geojson._warning;
             }
 
             const entry = {
@@ -3080,7 +3185,36 @@
     }
 
     // دوال قراءة الملفات
+    function showDwgNotice() {
+        const m = document.getElementById('dwgNoticeModal');
+        if (!m) { alert('ملفات DWG ملفات ثنائية مغلقة. يُرجى حفظ الملف بصيغة DXF من أوتوكاد (Save As -> DXF) أو مضغوط Shapefile (.zip) لرفعه مباشرة.'); return; }
+        m.classList.add('active');
+    }
+    (function bindDwgNotice() {
+        const ok = document.getElementById('dwgNoticeOk');
+        const m = document.getElementById('dwgNoticeModal');
+        if (ok) ok.addEventListener('click', function () { m.classList.remove('active'); });
+        if (m) m.addEventListener('click', function (e) { if (e.target === this) this.classList.remove('active'); });
+    })();
+
     async function readShapefile(zipData) {
+        // المحاولة الأولى: shpjs (يعيد الإسقاط تلقائياً عند وجود .prj، ويدعم الملفات المتعددة)
+        if (typeof window.shp === 'function') {
+            try {
+                const res = await window.shp(zipData);
+                const list = Array.isArray(res) ? res : [res];
+                const feats = [];
+                list.forEach(fc => { if (fc && Array.isArray(fc.features)) feats.push.apply(feats, fc.features); });
+                if (feats.length) {
+                    const out = { type: 'FeatureCollection', features: feats };
+                    const sc = findFirstCoordinate(feats[0] && feats[0].geometry && feats[0].geometry.coordinates);
+                    if (sc && (Math.abs(sc[0]) > 180 || Math.abs(sc[1]) > 90)) {
+                        window.__pendingShapefileCrs = null;
+                    }
+                    return out;
+                }
+            } catch (e) { /* fallback إلى المكتبة الاحتياطية */ }
+        }
         const zip = await JSZip.loadAsync(zipData);
         const entries = Object.values(zip.files).filter(f => !f.dir);
         const shpFiles = entries.filter(f => /\.shp$/i.test(f.name));
@@ -4669,6 +4803,9 @@
                 : (o.kind === 'base') ? '<i class="advtoc-typeicon fas fa-layer-group" title="خريطة أساس"></i>'
                 : (o.kind === 'location') ? '<i class="advtoc-typeicon fas fa-location-dot" title="موقع"></i>'
                 : (o.kind === 'custom') ? '<i class="advtoc-typeicon fas fa-pen-ruler" title="عنصر مرسوم"></i>' : '';
+            const delBtn = (o.kind !== 'base')
+                ? '<button type="button" class="advtoc-del-btn" data-del="1" title="حذف الطبقة نهائياً"><i class="fas fa-xmark"></i></button>'
+                : '';
             return '<div class="advtoc-layer" data-kind="' + o.kind + '" data-id="' + esc(o.id) + '" data-gtype="' + (o.gtype || '') + '" data-key="' + esc(o.key) + '" data-name="' + esc(o.name) + '">' +
                 grip +
                 '<input type="checkbox" class="advtoc-check" data-role="vis" title="إظهار/إخفاء"' + (o.checked ? ' checked' : '') + ' />' +
@@ -4677,6 +4814,7 @@
                 '<span class="advtoc-name">' + esc(o.name) + (o.sub ? '<small>' + esc(o.sub) + '</small>' : '') + '</span>' +
                 '<input type="range" class="advtoc-op" min="0" max="1" step="0.1" value="' + op + '" title="الشفافية ' + pct + '%" data-role="op" />' +
                 '<button type="button" class="advtoc-menu-btn" data-menu="1" title="خيارات الطبقة"><i class="fas fa-ellipsis-v"></i></button>' +
+                delBtn +
                 '</div>';
         }
 
@@ -4980,6 +5118,16 @@ const items = [
                 const row = cb.closest('.advtoc-layer');
                 if (row) setVisibility(readRow(row), cb.checked);
             });
+
+            // حذف مباشر (✖) داخل صف الطبقة
+            body.addEventListener('click', (e) => {
+                const del = e.target.closest('.advtoc-del-btn');
+                if (!del) return;
+                e.preventDefault();
+                e.stopPropagation();
+                const row = del.closest('.advtoc-layer');
+                if (row) { try { deleteLayer(readRow(row)); } catch (err) { console.warn(err); } }
+            }, true);
 
             // تعديل الشفافية
             body.addEventListener('input', (e) => {
