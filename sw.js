@@ -6,7 +6,7 @@
       ويعمل بدون إنترنت عند انقطاعه.
    ================================================================ */
 
-const VERSION = 'gis-water-v12';
+const VERSION = 'gis-water-v13';
 const CACHE = VERSION + '-cache';
 
 /* ملفات التطبيق الأساسية (نخزّنها عند التثبيت) */
@@ -25,6 +25,12 @@ const CORE_ASSETS = [
     './js/gis-edit.js',
     './js/gis-topology.js',
     './js/gis-measure.js',
+    './js/gis-swipe.js',
+    './js/gis-bi.js',
+    './js/gis-project.js',
+    './js/gis-elevation.js',
+    './js/gis-extrude.js',
+    './js/gis-print.js',
     './icons/icon-192.png',
     './icons/icon-512.png',
     './icons/icon-maskable-512.png',
