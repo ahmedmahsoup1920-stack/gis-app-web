@@ -4131,9 +4131,11 @@
         const layers = new Map();   // layerName -> [(kind, coords)]
         (fc.features || []).forEach(f => {
             const props = f.properties || {};
-            const raw = String(props.category || props.type || props.LAYER || 'DATA').slice(0, 40);
-            let layerName = raw.replace(/[^a-zA-Z0-9_\u0600-\u06FF -]/g, '_').replace(/\s+/g, ' ').trim();
+            const raw = String(props.category || props.type || props.LAYER || 'DATA');
+            let layerName = raw.replace(/[^A-Za-z0-9_]+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
             if (!layerName) layerName = 'DATA';
+            if (/^[0-9]/.test(layerName)) layerName = 'L' + layerName;
+            layerName = layerName.slice(0, 31);   // حد اسم الطبقة في DXF R12 = 31 حرفاً
             if (!layers.has(layerName)) layers.set(layerName, []);
             const g = f.geometry;
             if (!g) return;
@@ -4150,12 +4152,32 @@
 
         const R = [];
         const push = (...args) => args.forEach(v => R.push(String(v)));
+
+        // حساب حدود الرسم (UTM) لكتابتها في الهيدر حتى لا يظهر الرسم خارج المدى
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, anyPt = false;
+        const trackUTM = (lon, lat) => {
+            const u = toUTM(Number(lon), Number(lat));
+            if (isFinite(u.x) && isFinite(u.y)) {
+                anyPt = true;
+                if (u.x < minX) minX = u.x; if (u.y < minY) minY = u.y;
+                if (u.x > maxX) maxX = u.x; if (u.y > maxY) maxY = u.y;
+            }
+            return u;
+        };
+        layers.forEach(list => list.forEach(ent => {
+            const pts = (ent[0] === 'POINT') ? [ent[1]] : (ent[1] || []);
+            pts.forEach(c => { if (Array.isArray(c) && c.length >= 2 && isFinite(Number(c[0])) && isFinite(Number(c[1]))) trackUTM(c[0], c[1]); });
+        }));
+        if (!anyPt) { minX = 0; minY = 0; maxX = 1; maxY = 1; }
+
         // ---- HEADER ----
         push('0','SECTION','2','HEADER');
-        push('9','$ACADVER','1','AC1015');           // R2000: توافق واسع مع AutoCAD و LibreCAD و DraftSight
-        push('9','$INSUNITS','70','6');              // وحدة: متر
-        push('9','$EXTMIN','10','0','20','0','30','0');
-        push('9','$EXTMAX','10','1','20','1','30','1');
+        push('9','$ACADVER','1','AC1009');            // DXF R12 (متوافق مع AutoCAD 2022+ و LibreCAD و DraftSight)
+        push('9','$INSBASE','10','0.0','20','0.0','30','0.0');
+        push('9','$EXTMIN','10',minX.toFixed(6),'20',minY.toFixed(6),'30','0.0');
+        push('9','$EXTMAX','10',maxX.toFixed(6),'20',maxY.toFixed(6),'30','0.0');
+        push('9','$LIMMIN','10',minX.toFixed(6),'20',minY.toFixed(6));
+        push('9','$LIMMAX','10',maxX.toFixed(6),'20',maxY.toFixed(6));
         push('0','ENDSEC');
 
         // ---- TABLES ----
@@ -4182,30 +4204,47 @@
         push('0','ENDTAB');
         push('0','ENDSEC');
 
-        // ---- BLOCKS ----
-        push('0','SECTION','2','BLOCKS');
-        push('0','ENDSEC');
-
         // ---- ENTITIES ----
         push('0','SECTION','2','ENTITIES');
         tableNames.forEach(ln => {
             layers.get(ln).forEach(ent => {
                 const kind = ent[0], coords = ent[1];
                 if (kind === 'POINT') {
-                    const u = toUTM(coords[0], coords[1]);
-                    push('0','POINT','8',ln,'10',u.x.toFixed(3),'20',u.y.toFixed(3),'30','0','210','0','0','1');
+                    if (!Array.isArray(coords) || coords.length < 2) return;
+                    const u = toUTM(Number(coords[0]), Number(coords[1]));
+                    if (!isFinite(u.x) || !isFinite(u.y)) return;
+                    push('0','POINT','8',ln,'10',u.x.toFixed(6),'20',u.y.toFixed(6),'30','0.0');
                 } else if (kind === 'LINE') {
-                    const closed = coords.length > 1 && coords[0][0] === coords[coords.length-1][0] && coords[0][1] === coords[coords.length-1][1];
-                    const pts = coords.map(c => toUTM(c[0], c[1]));
-                    // POLYLINE كلاسيكي يتوافق مع كل المحررات (AutoCAD, LibreCAD, DraftSight, QGIS)
-                    push('0','POLYLINE','8',ln,'66','1','70',closed?'1':'0','210','0','0','1');
-                    pts.forEach(p => push('0','VERTEX','8',ln,'10',p.x.toFixed(3),'20',p.y.toFixed(3),'30','0'));
-                    if (closed) push('0','VERTEX','8',ln,'10',pts[0].x.toFixed(3),'20',pts[0].y.toFixed(3),'30','0'); // إغلاق صريح
-                    push('0','SEQEND');
+                    const clean = (coords || []).filter(c => Array.isArray(c) && c.length >= 2 && isFinite(Number(c[0])) && isFinite(Number(c[1])));
+                    if (clean.length < 2) return;
+                    const isClosed = clean.length > 2 && clean[0][0] === clean[clean.length-1][0] && clean[0][1] === clean[clean.length-1][1];
+                    if (clean.length === 2) {
+                        // خط بسيط: كيان LINE قياسي (10/20/30 + 11/21/31)
+                        const a = toUTM(Number(clean[0][0]), Number(clean[0][1]));
+                        const b = toUTM(Number(clean[1][0]), Number(clean[1][1]));
+                        if (![a.x,a.y,b.x,b.y].every(isFinite)) return;
+                        push('0','LINE','8',ln,
+                            '10',a.x.toFixed(6),'20',a.y.toFixed(6),'30','0.0',
+                            '11',b.x.toFixed(6),'21',b.y.toFixed(6),'31','0.0');
+                    } else {
+                        // خط متعدد الرؤوس: POLYLINE (متوافق مع R12)
+                        const verts = isClosed ? clean.slice(0, -1) : clean;
+                        const pts = verts.map(c => toUTM(Number(c[0]), Number(c[1]))).filter(p => isFinite(p.x) && isFinite(p.y));
+                        if (pts.length < 2) return;
+                        push('0','POLYLINE','8',ln,'66','1','70',isClosed ? '1' : '0');
+                        pts.forEach(p => push('0','VERTEX','8',ln,'10',p.x.toFixed(6),'20',p.y.toFixed(6),'30','0.0'));
+                        push('0','SEQEND');
+                    }
                 } else if (kind === 'POLY') {
-                    const pts = coords.map(c => toUTM(c[0], c[1]));
-                    push('0','POLYLINE','8',ln,'66','1','70','1','210','0','0','1');
-                    pts.forEach(p => push('0','VERTEX','8',ln,'10',p.x.toFixed(3),'20',p.y.toFixed(3),'30','0'));
+                    // مضلع مغلق: POLYLINE مع 70 = 1
+                    const clean = (coords || []).filter(c => Array.isArray(c) && c.length >= 2 && isFinite(Number(c[0])) && isFinite(Number(c[1])));
+                    if (clean.length < 3) return;
+                    const isClosed = clean[0][0] === clean[clean.length-1][0] && clean[0][1] === clean[clean.length-1][1];
+                    const verts = isClosed ? clean.slice(0, -1) : clean;
+                    const pts = verts.map(c => toUTM(Number(c[0]), Number(c[1]))).filter(p => isFinite(p.x) && isFinite(p.y));
+                    if (pts.length < 3) return;
+                    push('0','POLYLINE','8',ln,'66','1','70','1');
+                    pts.forEach(p => push('0','VERTEX','8',ln,'10',p.x.toFixed(6),'20',p.y.toFixed(6),'30','0.0'));
                     push('0','SEQEND');
                 }
             });
