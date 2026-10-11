@@ -1060,6 +1060,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/@mapbox/shp-write@0.4.3/shpwrite.js"></script>
+
+<!-- ===== طبقة أساس الوحدات المستقلة (Module Foundation) — تُحمَّل قبل سكربت التطبيق ===== -->
+<script src="js/gis-core.js"></script>
+
 <script>
     // ================================================================
     //  الإعدادات الأساسية
@@ -5330,7 +5334,40 @@ const items = [
         return api;
     })();
     window.AdvancedTOC = AdvancedTOC;
+
+    // ================================================================
+    //  ربط طبقة أساس وحدات GIS بالخريطة وحالة التطبيق
+    // ================================================================
+    if (window.GIS && typeof window.GIS.bootstrap === 'function') {
+        try {
+            window.GIS.bootstrap({
+                map: map,
+                L: L,
+                state: {
+                    uploadedFiles: uploadedFiles,
+                    customFeaturesData: customFeaturesData,
+                    locations: locations,
+                    layerStyles: layerStyles,
+                    measurements: measurements
+                },
+                ui: {
+                    switchTab: (typeof switchTab === 'function') ? switchTab : null,
+                    setSidePanel: (typeof setSidePanel === 'function') ? setSidePanel : null,
+                    renderDashboard: (typeof renderDashboard === 'function') ? renderDashboard : null,
+                    escapeHtml: (typeof escapeHtml === 'function') ? escapeHtml : null
+                },
+                api: {
+                    AdvancedTOC: window.AdvancedTOC || null,
+                    openAttrTable: window.openAttrTable || null,
+                    openDataTable: window.openDataTable || null
+                }
+            });
+        } catch (e) { console.warn('[GIS] bootstrap فشل', e); }
+    }
 </script>
+
+<!-- ===== وحدات GIS المستقلة (يُحمّل كل ملف على حدة؛ عزل كامل عن أحداث الخريطة) ===== -->
+<script src="js/gis-system-info.js"></script>
 
 <!-- ===== PWA: تسجيل Service Worker + زر التثبيت ===== -->
 <script>
