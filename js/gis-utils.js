@@ -154,6 +154,29 @@
         return true;
     }
 
+    /* إعادة بناء طبقة عنصر مخصّص من الـ geojson بعد تعديل هندسته ثم إعادة التنسيق */
+    function refreshCustomLayer(cf) {
+        var L = window.L;
+        if (!cf || !cf.geojson || !cf.layer) { return; }
+        var gt = geomType(cf.geojson);
+        var pane = gt === 'polygon' ? 'gisPolyPane' : (gt === 'line' ? 'gisLinePane' : 'gisPointPane');
+        try { window.customItems.removeLayer(cf.layer); } catch (e) {}
+        var layer;
+        if (gt === 'point') {
+            layer = L.geoJSON(cf.geojson, {
+                pane: pane,
+                pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 8, color: cf.color, weight: 2, fillColor: cf.color, fillOpacity: 0.85, pane: pane }); }
+            });
+        } else {
+            layer = L.geoJSON(cf.geojson, { pane: pane });
+        }
+        cf.layer = layer;
+        try { window.customItems.addLayer(layer); } catch (e) {}
+        try { if (layer.bindPopup) { layer.bindPopup(window.buildFeaturePopup ? window.buildFeaturePopup(cf.geojson) : (cf.name || ''), { maxWidth: 360, className: 'gis-popup' }); } } catch (e) {}
+        try { applyCustomFeatureStyle(cf); } catch (e) {}
+        try { renderCustomFeatures(); updateTOC(); } catch (e) {}
+    }
+
     /* صفّ نموذج: label + control */
     function field(label, controlHtml, hint) {
         return '<label style="display:block;font-size:12px;font-weight:700;margin:8px 0 3px;color:var(--txt,#e2e8f0);">' +
@@ -181,6 +204,7 @@
         fmtLen: fmtLen,
         addResultPolygon: addResultPolygon,
         removeCustomById: removeCustomById,
+        refreshCustomLayer: refreshCustomLayer,
         field: field,
         selectStyle: selectStyle,
         inputStyle: inputStyle,
