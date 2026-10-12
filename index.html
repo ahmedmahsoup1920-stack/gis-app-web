@@ -706,6 +706,33 @@
             #sideDock { top:calc(var(--app-top) + 12px); left:10px; }
             .sidebar.collapsed { transform:translateY(-10px); opacity:0; }
         }
+
+        /* ===== تكبير الأيقونات + التحكم بالحجم (Ctrl + عجلة الفأرة) ===== */
+        :root { --gis-icon-size: 22px; }
+        .header .menu-toggle i,
+        #sideDock button i,
+        .sidebar .tabs button i,
+        .tab-header h4 i,
+        .tab-header .add-btn i,
+        .upload-area .upload-btn i,
+        .save-row .save-btn i,
+        .save-row .export-btn i,
+        .controls button i,
+        .advtoc-head i,
+        .gis-mod-acc-ic i,
+        .map-wrapper .leaflet-bar a,
+        .map-wrapper .leaflet-control i {
+            font-size: var(--gis-icon-size) !important;
+            transition: font-size 0.1s ease;
+        }
+
+        /* ===== إخفاء أي شريط سفلي مكرر ===== */
+        .bottom-toolbar,
+        #bottom-bar,
+        div[class*="bottom-nav"],
+        .leaflet-bottom.leaflet-horizontal {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -5800,6 +5827,28 @@ const items = [
     document.addEventListener('dblclick', function (e) {
         var ui = e.target && e.target.closest && e.target.closest('.controls, .header, .sidebar, #sideDock, .advtoc-menu');
         if (ui) e.preventDefault();
+    }, { passive: false });
+})();
+</script>
+
+<script>
+(function () {
+    var MIN = 14, MAX = 40, STEP = 2, size = 22;
+    try {
+        var saved = parseInt(localStorage.getItem('gis-icon-size'), 10);
+        if (saved >= MIN && saved <= MAX) size = saved;
+    } catch (e) {}
+    function apply() {
+        document.documentElement.style.setProperty('--gis-icon-size', size + 'px');
+    }
+    apply();
+    document.addEventListener('wheel', function (event) {
+        if (!event.ctrlKey) return;
+        event.preventDefault();
+        if (event.deltaY < 0) { size = Math.min(MAX, size + STEP); }
+        else { size = Math.max(MIN, size - STEP); }
+        apply();
+        try { localStorage.setItem('gis-icon-size', size); } catch (e) {}
     }, { passive: false });
 })();
 </script>
