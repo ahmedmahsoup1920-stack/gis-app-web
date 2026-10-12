@@ -66,6 +66,7 @@
     var INPUT = 'width:100%;box-sizing:border-box;padding:9px 11px;margin:5px 0;border-radius:9px;border:1px solid var(--card-brd,#334155);background:#0f172a;color:var(--txt,#e2e8f0);font:13px inherit;';
     var BTN = 'display:block;width:100%;box-sizing:border-box;padding:10px 12px;margin:6px 0;border:none;border-radius:9px;background:var(--accent,#0284c7);color:#fff;font:700 13px inherit;cursor:pointer;';
     var BTN2 = 'display:inline-block;padding:7px 11px;margin:3px 3px 3px 0;border:1px solid var(--card-brd,#334155);border-radius:8px;background:transparent;color:var(--txt,#e2e8f0);font:600 12px inherit;cursor:pointer;';
+    var OAUTH_BTN = 'display:flex;align-items:center;justify-content:center;gap:8px;width:100%;box-sizing:border-box;padding:9px;margin:6px 0;border:1px solid var(--card-brd,#cbd5e1);border-radius:9px;background:#fff;color:#1f2937;font:700 13px inherit;cursor:pointer;';
     var HINT = 'font-size:11.5px;line-height:1.85;color:var(--txt-dim,#94a3b8);margin:6px 0;';
 
     // ---------- sdk ----------
@@ -176,6 +177,18 @@
             toast('تم تسجيل الخروج', 'info');
             render();
         });
+    }
+
+    function signInWithOAuth(provider) {
+        return getClient()
+            .then(function (c) {
+                return c.auth.signInWithOAuth({
+                    provider: provider,
+                    options: { redirectTo: window.location.origin + window.location.pathname }
+                });
+            })
+            .then(function (r) { if (r && r.error) throw r.error; })
+            .catch(function (e) { toast('فشل تسجيل الدخول بـ' + provider + ': ' + errMsg(e), 'error'); });
     }
 
     // ---------- projects ----------
@@ -298,6 +311,9 @@
             '<div class="tab-header"><h4><i class="fas fa-cloud"></i> Cloud (Supabase)</h4></div>' +
             '<div style="' + HINT + '">سجّل الدخول لحفظ مشاريعك ومزامنتها سحابيًا.</div>' +
             '<div style="' + CARD + '">' +
+            '<button data-act="google" style="' + OAUTH_BTN + '"><i class="fab fa-google" style="color:#ea4335"></i> Continue with Google</button>' +
+            '<button data-act="github" style="' + OAUTH_BTN + 'background:#24292e;color:#fff;border-color:#24292e"><i class="fab fa-github"></i> Continue with GitHub</button>' +
+            '<div style="display:flex;align-items:center;gap:8px;margin:10px 0;color:var(--txt-dim,#94a3b8);font-size:11px"><span style="flex:1;height:1px;background:var(--card-brd,#334155)"></span>أو بالبريد<span style="flex:1;height:1px;background:var(--card-brd,#334155)"></span></div>' +
             '<input data-f="email" type="email" placeholder="البريد الإلكتروني" style="' + INPUT + '">' +
             '<input data-f="pass" type="password" placeholder="كلمة المرور" style="' + INPUT + '">' +
             '<button data-act="login" style="' + BTN + '"><i class="fas fa-right-to-bracket"></i> تسجيل الدخول</button>' +
@@ -309,6 +325,10 @@
         function creds() {
             return { e: root.querySelector('[data-f="email"]').value.trim(), p: root.querySelector('[data-f="pass"]').value };
         }
+        var google = root.querySelector('[data-act="google"]');
+        if (google) google.addEventListener('click', function () { signInWithOAuth('google'); });
+        var github = root.querySelector('[data-act="github"]');
+        if (github) github.addEventListener('click', function () { signInWithOAuth('github'); });
         root.querySelector('[data-act="login"]').addEventListener('click', function () {
             var c = creds();
             if (!c.e || !c.p) { toast('أدخل البريد وكلمة المرور', 'error'); return; }
