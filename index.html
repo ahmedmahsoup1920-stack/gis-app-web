@@ -717,7 +717,7 @@
         .upload-area .upload-btn i,
         .save-row .save-btn i,
         .save-row .export-btn i,
-        .controls button i,
+        .draw-tool-btn i,
         .advtoc-head i,
         .gis-mod-acc-ic i,
         .map-wrapper .leaflet-bar a,
@@ -733,6 +733,21 @@
         .leaflet-bottom.leaflet-horizontal {
             display: none !important;
         }
+
+        /* ===== تبويب الأدوات (نُقلت إليه أدوات الشريط السفلي) ===== */
+        .sidebar .tabs { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:4px; padding:6px 6px 0; }
+        .sidebar .tabs button { min-width:0; }
+        #tab-tools .tab-header { margin-top:16px; }
+        #tab-tools .tab-header:first-child { margin-top:0; }
+        #tab-tools .draw-tools-grid { margin-bottom:6px; }
+        .tool-format-row { display:flex; align-items:center; gap:10px; margin:2px 0 10px; }
+        .tool-format-row label { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--txt-dim, #64748b); white-space:nowrap; }
+        .tool-format-row label i { color:var(--accent, #0284c7); }
+        .tool-format-row select { flex:1; min-width:0; padding:9px 10px; border-radius:9px; border:1px solid var(--card-brd, #334155); background:var(--card-bg, #1e293b); color:var(--txt, #e2e8f0); font-size:13px; font-family:inherit; cursor:pointer; }
+        .tool-format-row select:focus { outline:none; border-color:var(--accent, #0284c7); }
+        #tab-tools .save-row .save-btn { flex:1 1 auto; }
+        #tab-tools .save-row .export-btn { flex:0 0 auto; padding:0 16px; }
+        #tab-tools .draw-tool-btn.active { background:#e8973a; color:#fff; border-color:#e8973a; box-shadow:0 2px 10px rgba(232,151,58,.4); }
     </style>
 </head>
 <body>
@@ -789,6 +804,7 @@
             <button class="active" data-tab="locations"><i class="fas fa-map-pin"></i> Locations</button>
             <button data-tab="draw"><i class="fas fa-pen"></i> Draw</button>
             <button data-tab="files"><i class="fas fa-folder-open"></i> Data</button>
+            <button data-tab="tools"><i class="fas fa-toolbox"></i> Tools</button>
             <button data-tab="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
             <button data-tab="settings"><i class="fas fa-cog"></i> Settings</button>
         </div>
@@ -828,6 +844,53 @@
                 <button class="draw-tool-btn attr-tool-btn" id="openAttrTableBtn"><i class="fas fa-layer-group"></i> Attribute Table (UTM) + Export</button>
                 <div class="coord-hint">Every point/line/polygon you draw automatically gets a UTM coordinate (Zone / Easting / Northing) stored. You can edit attributes later, then export all to Excel or CSV.</div>
                 <div id="customFeaturesList"></div>
+            </div>
+
+            <!-- تبويب الأدوات -->
+            <div class="tab-pane" id="tab-tools">
+                <div class="tab-header">
+                    <h4><i class="fas fa-ruler-combined"></i> Measurement</h4>
+                </div>
+                <div class="draw-tools-grid">
+                    <button class="draw-tool-btn" id="measureDistBtn" title="Measure distance"><i class="fas fa-ruler"></i> Distance</button>
+                    <button class="draw-tool-btn" id="measureAreaBtn" title="Measure area"><i class="fas fa-draw-polygon"></i> Area</button>
+                </div>
+                <div class="coord-hint">Click points on the map to measure. Results appear in the Measurements panel on the map.</div>
+
+                <div class="tab-header">
+                    <h4><i class="fas fa-crop-alt"></i> Selection</h4>
+                </div>
+                <button class="draw-tool-btn" id="selectToolBtn" title="Draw a rectangle to select part of the data, then export it"><i class="fas fa-crop-alt"></i> Select by Rectangle</button>
+                <div class="coord-hint">Draw a rectangle to select features, then export only the selection.</div>
+
+                <div class="tab-header">
+                    <h4><i class="fas fa-file-export"></i> Export &amp; Download</h4>
+                </div>
+                <div class="tool-format-row">
+                    <label for="exportFormatSelect"><i class="fas fa-file-code"></i> Format</label>
+                    <select id="exportFormatSelect" title="Export format">
+                        <option value="geojson">GeoJSON</option>
+                        <option value="kml">KML</option>
+                        <option value="kmz">KMZ</option>
+                        <option value="dxf">DXF (R12)</option>
+                        <option value="shp">Shapefile (ZIP)</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                </div>
+                <div class="save-row">
+                    <button class="save-btn" id="exportLayerBtn" title="Export visible layers (or current selection)"><i class="fas fa-file-export"></i> <span class="btn-text">تصدير</span></button>
+                    <button class="export-btn" id="exportOptionsBtn" title="Advanced export options"><i class="fas fa-sliders"></i> Options</button>
+                </div>
+                <div class="coord-hint">Exports every visible layer (or the current selection). Options let you pick a specific source (stations, lines, reservoirs, drawings&nbsp;…).</div>
+
+                <div class="tab-header">
+                    <h4><i class="fas fa-cube"></i> View &amp; Map</h4>
+                </div>
+                <div class="draw-tools-grid">
+                    <button class="draw-tool-btn" id="view3DBtn" title="Toggle 3D view"><i class="fas fa-cube"></i> 3D View</button>
+                    <button class="draw-tool-btn" id="resetBtn" title="Reset the map view"><i class="fas fa-home"></i> Reset</button>
+                    <button class="draw-tool-btn" id="clearBtn" title="Clear all drawings"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
             </div>
 
             <!-- تبويب الملفات والرفع -->
@@ -961,28 +1024,6 @@
         <div class="loader" id="loader">
             <div class="spinner"></div>
             <p>⏳ جاري التحميل...</p>
-        </div>
-
-        <div class="controls">
-            <button class="measure-btn" id="measureDistBtn" title="قياس مسافة"><i class="fas fa-ruler"></i> <span class="btn-text">مسافة</span></button>
-            <button class="measure-btn" id="measureAreaBtn" title="قياس مساحة"><i class="fas fa-draw-polygon"></i> <span class="btn-text">مساحة</span></button>
-            <span class="controls-divider"></span>
-            <button class="measure-btn" id="selectToolBtn" title="رسم مستطيل لتحديد جزء من البيانات ثم تصديره"><i class="fas fa-crop-alt"></i> <span class="btn-text">تحديد</span></button>
-            <span class="controls-divider"></span>
-            <select id="exportFormatSelect" title="صيغة التصدير">
-                <option value="geojson">GeoJSON</option>
-                <option value="kml">KML</option>
-                <option value="kmz">KMZ</option>
-                <option value="dxf">DXF (R12)</option>
-                <option value="shp">Shapefile (ZIP)</option>
-                <option value="csv">CSV</option>
-            </select>
-            <button id="exportLayerBtn" title="تصدير الطبقات الظاهرة"><i class="fas fa-file-export"></i> <span class="btn-text">تصدير</span></button>
-            <button class="measure-btn" id="exportOptionsBtn" title="خيارات التصدير المتقدمة"><i class="fas fa-sliders"></i></button>
-            <span class="controls-divider"></span>
-            <button id="view3DBtn" title="عرض ثلاثي الأبعاد"><i class="fas fa-cube"></i> <span class="btn-text">3D</span></button>
-            <button class="outline" id="resetBtn"><i class="fas fa-home"></i> إعادة</button>
-            <button class="outline" id="clearBtn"><i class="fas fa-eraser"></i> مسح</button>
         </div>
 
         <div id="measurePanel">
