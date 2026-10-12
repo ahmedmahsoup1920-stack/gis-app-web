@@ -972,10 +972,13 @@
             <select id="exportFormatSelect" title="صيغة التصدير">
                 <option value="geojson">GeoJSON</option>
                 <option value="kml">KML</option>
+                <option value="kmz">KMZ</option>
                 <option value="dxf">DXF (R12)</option>
                 <option value="shp">Shapefile (ZIP)</option>
+                <option value="csv">CSV</option>
             </select>
-            <button id="exportLayerBtn" title="تصدير الطبقة الحالية"><i class="fas fa-file-export"></i> <span class="btn-text">تصدير</span></button>
+            <button id="exportLayerBtn" title="تصدير الطبقات الظاهرة"><i class="fas fa-file-export"></i> <span class="btn-text">تصدير</span></button>
+            <button class="measure-btn" id="exportOptionsBtn" title="خيارات التصدير المتقدمة"><i class="fas fa-sliders"></i></button>
             <span class="controls-divider"></span>
             <button id="view3DBtn" title="عرض ثلاثي الأبعاد"><i class="fas fa-cube"></i> <span class="btn-text">3D</span></button>
             <button class="outline" id="resetBtn"><i class="fas fa-home"></i> إعادة</button>
@@ -1058,6 +1061,46 @@
         </p>
         <div class="modal-actions">
             <button class="save-btn" id="dwgNoticeOk">فهمت</button>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة التصدير المتقدم: المصدر + الصيغة + اسم الملف -->
+<div class="modal-overlay" id="exportModal">
+    <div class="modal" style="max-width:440px;">
+        <h3><i class="fas fa-file-export" style="color:#1a5a8a;"></i> تصدير البيانات المكانية</h3>
+
+        <label>المصدر (Source)</label>
+        <select id="expSource">
+            <option value="visible">كل الطبقات الظاهرة على الخريطة</option>
+            <option value="all">كل الطبقات (بما فيها المخفية)</option>
+            <option value="water">شبكة المياه (محطات الضخ · خطوط النقل · الخزانات)</option>
+            <option value="drawn">المعالم المرسومة</option>
+            <option value="files">الملفات المرفوعة</option>
+            <option value="locations">المواقع المحفوظة</option>
+            <option value="selection">العناصر المحددة (إن وجدت)</option>
+        </select>
+
+        <label>الصيغة (Format)</label>
+        <select id="expFormat">
+            <option value="geojson">GeoJSON (.geojson)</option>
+            <option value="kml">KML — Google Earth (.kml)</option>
+            <option value="kmz">KMZ مضغوط (.kmz)</option>
+            <option value="dxf">DXF R12 (UTM) (.dxf) — لأوتوكاد</option>
+            <option value="shp">Shapefile (.zip)</option>
+            <option value="csv">CSV جدول إحداثيات وخصائص (.csv)</option>
+        </select>
+
+        <label>اسم الملف</label>
+        <input type="text" id="expName" placeholder="water-gis-export" />
+
+        <div id="expSummary" style="margin-top:12px;padding:10px 12px;border-radius:8px;background:#f1f7fb;border:1px solid #d7e3ee;color:#1a5a8a;font-size:12.5px;font-weight:600;">
+            جارٍ حساب عدد المعالم...
+        </div>
+
+        <div class="modal-actions">
+            <button class="cancel-btn" id="expCancel">إلغاء</button>
+            <button class="save-btn" id="expDownload"><i class="fas fa-download"></i> تحميل</button>
         </div>
     </div>
 </div>
@@ -4751,75 +4794,245 @@
         return R.join('\n');
     }
 
-    document.getElementById('exportLayerBtn').addEventListener('click', async function() {
-        const data = getExportableData();
-        if (!data.features.length) {
-            alert('لا توجد بيانات لتصديرها.');
+    // ================================================================
+    //  محرّك التصدير الموحّد: GeoJSON · KML · KMZ · DXF · Shapefile · CSV
+    //  مرتبط ديناميكياً بكل الطبقات الحالية على الخريطة
+    // ================================================================
+    function showToast(msg, type) {
+        let t = document.getElementById('gisToast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'gisToast';
+            t.style.cssText = 'position:fixed;left:50%;bottom:calc(84px + var(--sab));transform:translateX(-50%) translateY(8px);z-index:12000;max-width:92vw;padding:11px 18px;border-radius:11px;font-size:13px;font-weight:700;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.4);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;font-family:inherit;text-align:center;';
+            document.body.appendChild(t);
+        }
+        const colors = { ok: '#0e8f8a', warn: '#e8973a', err: '#c0392b', info: '#1a5a8a' };
+        t.style.background = colors[type] || colors.info;
+        t.textContent = msg;
+        t.style.opacity = '1';
+        t.style.transform = 'translateX(-50%) translateY(0)';
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(function () { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(8px)'; }, 4200);
+    }
+
+    function csvCell(v) {
+        const s = (v == null) ? '' : String(v);
+        return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }
+
+    function firstCoord(geom) {
+        if (!geom || !geom.coordinates) return null;
+        let c = geom.coordinates;
+        while (Array.isArray(c) && Array.isArray(c[0])) c = c[0];
+        return (Array.isArray(c) && c.length >= 2) ? c : null;
+    }
+
+    function geojsonToCSV(fc) {
+        const feats = (fc && fc.features) || [];
+        const keys = [];
+        feats.forEach(f => Object.keys(f.properties || {}).forEach(k => { if (keys.indexOf(k) < 0) keys.push(k); }));
+        const head = ['geometry', 'longitude', 'latitude'].concat(keys);
+        const lines = [head.map(csvCell).join(',')];
+        feats.forEach(f => {
+            const c = firstCoord(f.geometry);
+            const row = [(f.geometry ? f.geometry.type : '')]
+                .concat(c ? [c[0], c[1]] : ['', ''])
+                .concat(keys.map(k => (f.properties && f.properties[k] != null) ? f.properties[k] : ''));
+            lines.push(row.map(csvCell).join(','));
+        });
+        return lines.join('\r\n');
+    }
+
+    function collectExportFeatures(source) {
+        const out = [];
+        const pushFC = (fc) => { if (fc && Array.isArray(fc.features)) fc.features.forEach(f => { if (f && f.geometry) out.push(f); }); };
+
+        if (source === 'selection') {
+            const sel = window.__selectedFeatures;
+            if (sel && Array.isArray(sel.features)) sel.features.forEach(f => { if (f && f.geometry) out.push(f); });
+            return out;
+        }
+
+        const onlyVisible = (source === 'visible');
+        const wantWater = (source === 'all' || source === 'visible' || source === 'water');
+        const wantDrawn = (source === 'all' || source === 'visible' || source === 'drawn');
+        const wantFiles = (source === 'all' || source === 'visible' || source === 'files');
+        const wantLocs  = (source === 'all' || source === 'visible' || source === 'locations');
+
+        if (wantWater) {
+            Object.keys(waterLayers).forEach(k => {
+                if (onlyVisible && !map.hasLayer(waterLayers[k].layer)) return;
+                pushFC(waterLayers[k].data);
+            });
+        }
+        if (wantDrawn) {
+            (customFeaturesData || []).forEach(cf => {
+                if (!cf.geojson || !cf.geojson.geometry) return;
+                if (onlyVisible && typeof isLayerVis === 'function' && !isLayerVis('custom', cf.id)) return;
+                out.push(cf.geojson);
+            });
+        }
+        if (wantFiles) {
+            (uploadedFiles || []).forEach(f => {
+                ((f.data && f.data.features) || []).forEach(ft => {
+                    if (!ft || !ft.geometry) return;
+                    const gt = (typeof geomTypeOf === 'function') ? geomTypeOf(ft) : (ft.geometry.type || '');
+                    if (onlyVisible && typeof isLayerVis === 'function' && !isLayerVis('file', f.id, gt)) return;
+                    out.push(ft);
+                });
+            });
+        }
+        if (wantLocs) {
+            (locations || []).forEach(loc => {
+                if (!loc || isNaN(loc.lat) || isNaN(loc.lng)) return;
+                if (onlyVisible && typeof isLayerVis === 'function' && !isLayerVis('location', loc.id)) return;
+                out.push({
+                    type: 'Feature',
+                    geometry: { type: 'Point', coordinates: [Number(loc.lng), Number(loc.lat)] },
+                    properties: { name: loc.name || '', description: loc.desc || '', category: 'location', color: loc.color || '#e63946' }
+                });
+            });
+        }
+        return out;
+    }
+
+    function getExportableData(source) {
+        if (!source) {
+            const hasSel = !!(window.__selectedFeatures && Array.isArray(window.__selectedFeatures.features) && window.__selectedFeatures.features.length);
+            source = hasSel ? 'selection' : 'visible';
+        }
+        return { type: 'FeatureCollection', features: collectExportFeatures(source) };
+    }
+
+    function saveBlob(blob, filename) {
+        try {
+            if (typeof saveAs === 'function') { saveAs(blob, filename); return; }
+        } catch (e) {}
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    async function buildShapefileBlob(features, baseName) {
+        if (!window.shpwrite) throw new Error('مكتبة تصدير Shapefile غير متاحة.');
+        const zipBlob = await window.shpwrite.zip({ type: 'FeatureCollection', features: features }, {
+            outputType: 'blob',
+            folder: baseName,
+            filename: baseName,
+            types: { Point: 'point', MultiPoint: 'point', LineString: 'line', MultiLineString: 'line', Polygon: 'polygon', MultiPolygon: 'polygon' }
+        });
+        const PRJ_WGS84 = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]';
+        const jsZip = await JSZip.loadAsync(zipBlob);
+        Object.keys(jsZip.files).forEach(name => {
+            if (jsZip.files[name].dir) return;
+            if (/\.(shp|shx|dbf)$/i.test(name)) {
+                const base = name.replace(/\.[^.]+$/, '');
+                if (!jsZip.files[base + '.prj']) jsZip.file(base + '.prj', PRJ_WGS84);
+                if (!jsZip.files[base + '.cpg']) jsZip.file(base + '.cpg', 'UTF-8');
+            }
+        });
+        return await jsZip.generateAsync({ type: 'blob', mimeType: 'application/zip' });
+    }
+
+    async function exportGeoData(features, format, options) {
+        options = options || {};
+        const name = String(options.name || 'water-gis-export').replace(/\.[^.]+$/, '') || 'water-gis-export';
+        const fc = { type: 'FeatureCollection', features: features };
+        if (!features || !features.length) throw new Error('لا توجد معالم للتصدير');
+
+        if (format === 'geojson') {
+            saveBlob(new Blob([JSON.stringify(fc, null, 2)], { type: 'application/geo+json' }), name + '.geojson');
+        } else if (format === 'kml') {
+            saveBlob(new Blob([geojsonToKML(fc, name)], { type: 'application/vnd.google-earth.kml+xml' }), name + '.kml');
+        } else if (format === 'kmz') {
+            const zip = new JSZip();
+            zip.file(name + '.kml', geojsonToKML(fc, name));
+            const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.google-earth.kmz' });
+            saveBlob(blob, name + '.kmz');
+        } else if (format === 'dxf') {
+            saveBlob(new Blob([geojsonToDXF_R12(fc, name)], { type: 'application/dxf' }), name + '.dxf');
+        } else if (format === 'csv') {
+            saveBlob(new Blob(['\ufeff' + geojsonToCSV(fc)], { type: 'text/csv;charset=utf-8' }), name + '.csv');
+        } else if (format === 'shp') {
+            saveBlob(await buildShapefileBlob(features, name), name + '.zip');
+        } else {
+            throw new Error('صيغة غير مدعومة: ' + format);
+        }
+    }
+
+    // التصدير السريع من شريط التحكم السفلي (المحدد ← وإلا الطبقات الظاهرة)
+    document.getElementById('exportLayerBtn').addEventListener('click', async function () {
+        const fmt = document.getElementById('exportFormatSelect').value;
+        const hasSel = !!(window.__selectedFeatures && Array.isArray(window.__selectedFeatures.features) && window.__selectedFeatures.features.length);
+        const source = hasSel ? 'selection' : 'visible';
+        const features = collectExportFeatures(source);
+        if (!features.length) {
+            showToast('لا توجد معالم على الخريطة للتصدير. ارسم عنصراً أو ارفع طبقة.', 'warn');
             return;
         }
-        const fmt = document.getElementById('exportFormatSelect').value;
-        const baseName = (currentFileName || 'تصدير').replace(/\.[^.]+$/, '');
-        const selected = window.__selectedFeatures && Array.isArray(window.__selectedFeatures.features) && window.__selectedFeatures.features.length ? true : false;
-        const outputName = (selected ? (baseName + '_محدد') : baseName);
-
+        const base = ((currentFileName || 'water-gis-export').replace(/\.[^.]+$/, '') || 'water-gis-export');
+        const name = hasSel ? (base + '_selection') : base;
+        const btn = this; const old = btn.innerHTML; btn.disabled = true;
         try {
-            if (fmt === 'geojson') {
-                downloadBlob(JSON.stringify(data, null, 2), `${outputName}.geojson`, 'application/geo+json');
-            } else if (fmt === 'kml') {
-                downloadBlob(geojsonToKML(data, outputName), `${outputName}.kml`, 'application/vnd.google-earth.kml+xml');
-            } else if (fmt === 'dxf') {
-                const dxfContent = geojsonToDXF_R12(data, outputName);
-                downloadBlob(dxfContent, `${outputName}.dxf`, 'application/dxf');
-            } else if (fmt === 'shp') {
-                if (!window.shpwrite || !window.saveAs) throw new Error('مكتبة تصدير Shapefile غير متاحة.');
-                const zipBlob = await shpwrite.zip(data, {
-                    outputType: 'blob',
-                    folder: outputName,
-                    filename: outputName,
-                    types: { Point: 'point', MultiPoint: 'point', LineString: 'line', MultiLineString: 'line', Polygon: 'polygon', MultiPolygon: 'polygon' }
-                });
-                const PRJ_WGS84 = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]';
-                const jsZip = await JSZip.loadAsync(zipBlob);
-                Object.keys(jsZip.files).forEach(name => {
-                    if (jsZip.files[name].dir) return;
-                    if (/\.(shp|shx|dbf)$/i.test(name)) {
-                        const base = name.replace(/\.[^.]+$/, '');
-                        if (!jsZip.files[base + '.prj']) jsZip.file(base + '.prj', PRJ_WGS84);
-                        if (!jsZip.files[base + '.cpg']) jsZip.file(base + '.cpg', 'UTF-8');
-                    }
-                });
-                const fixedZip = await jsZip.generateAsync({ type: 'blob', mimeType: 'application/zip' });
-                saveAs(fixedZip, `${outputName}.zip`);
-            }
-            showSaveStatus(`⬇️ تم تصدير ${selected ? 'العناصر المحددة (' + data.features.length + ')' : 'الطبقة (' + data.features.length + ')'} بصيغة ${fmt.toUpperCase()}`);
-        } catch(e) {
+            await exportGeoData(features, fmt, { name: name });
+            showToast('⬇️ تم تصدير ' + features.length + ' معلم بصيغة ' + fmt.toUpperCase(), 'ok');
+            try { showSaveStatus('⬇️ تم تصدير ' + features.length + ' معلم بصيغة ' + fmt.toUpperCase()); } catch (e) {}
+        } catch (e) {
             console.error(e);
-            alert(`❌ تعذر التصدير: ${e.message}`);
+            showToast('❌ تعذر التصدير: ' + e.message, 'err');
+        } finally {
+            btn.disabled = false; btn.innerHTML = old;
         }
     });
 
-    function getExportableData() {
-        let features = null;
-        if (window.__selectedFeatures && Array.isArray(window.__selectedFeatures.features) && window.__selectedFeatures.features.length) {
-            features = window.__selectedFeatures.features.slice();
-        } else {
-            features = [];
-            (uploadedFiles || []).forEach(f => {
-                if (f.data && Array.isArray(f.data.features)) f.data.features.forEach(feat => features.push(feat));
-            });
-            (customFeaturesData || []).forEach(cf => {
-                if (cf.geojson && cf.geojson.geometry) features.push(cf.geojson);
-            });
-            (locations || []).forEach(loc => {
-                if (loc && !isNaN(loc.lat) && !isNaN(loc.lng)) features.push({
-                    type: 'Feature',
-                    geometry: { type: 'Point', coordinates: [loc.lng, loc.lat] },
-                    properties: { name: loc.name || '', description: loc.desc || '', category: 'موقع', color: loc.color || '#e63946' }
-                });
-            });
-        }
-        return { type: 'FeatureCollection', features };
+    // ---- النافذة المتقدمة للتصدير (اختيار المصدر والصيغة) ----
+    function updateExportSummary() {
+        const srcSel = document.getElementById('expSource');
+        const el = document.getElementById('expSummary');
+        if (!srcSel || !el) return;
+        const n = collectExportFeatures(srcSel.value).length;
+        el.textContent = n ? ('عدد المعالم الجاهزة للتصدير: ' + n) : 'لا توجد معالم في هذا المصدر.';
+        el.style.color = n ? '#1a5a8a' : '#c0392b';
     }
+
+    function openExportModal() {
+        const m = document.getElementById('exportModal');
+        if (!m) return;
+        const nameEl = document.getElementById('expName');
+        if (nameEl && !nameEl.value) nameEl.value = ((currentFileName || 'water-gis-export').replace(/\.[^.]+$/, '') || 'water-gis-export');
+        updateExportSummary();
+        m.classList.add('active');
+    }
+
+    (function initExportModal() {
+        const optionsBtn = document.getElementById('exportOptionsBtn');
+        const cancelBtn = document.getElementById('expCancel');
+        const dlBtn = document.getElementById('expDownload');
+        const srcSel = document.getElementById('expSource');
+        if (optionsBtn) optionsBtn.addEventListener('click', openExportModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', () => { document.getElementById('exportModal').classList.remove('active'); });
+        if (srcSel) srcSel.addEventListener('change', updateExportSummary);
+        if (dlBtn) dlBtn.addEventListener('click', async function () {
+            const src = document.getElementById('expSource').value;
+            const fmt = document.getElementById('expFormat').value;
+            const name = (document.getElementById('expName').value || 'water-gis-export').trim() || 'water-gis-export';
+            const feats = collectExportFeatures(src);
+            if (!feats.length) { showToast('لا توجد معالم للتصدير من المصدر المحدد.', 'warn'); return; }
+            const btn = this; const old = btn.innerHTML; btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ التصدير...';
+            try {
+                await exportGeoData(feats, fmt, { name: name });
+                showToast('⬇️ تم تصدير ' + feats.length + ' معلم بصيغة ' + fmt.toUpperCase(), 'ok');
+                const m = document.getElementById('exportModal'); if (m) m.classList.remove('active');
+            } catch (e) {
+                console.error(e);
+                showToast('❌ تعذر التصدير: ' + e.message, 'err');
+            } finally {
+                btn.disabled = false; btn.innerHTML = old;
+            }
+        });
+    })();
 
     function downloadBlob(content, filename, mime) {
         const blob = new Blob([content], { type: mime });
