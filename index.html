@@ -743,35 +743,35 @@
 </header>
 
 <div class="app">
-    <div id="sideDock" class="hidden" aria-label="شريط الأدوات السريع">
-        <button type="button" data-side="expand" title="فتح اللوحة"><i class="fas fa-chevron-right"></i></button>
-        <button type="button" data-side="locations" title="المواقع"><i class="fas fa-map-pin"></i></button>
+    <div id="sideDock" class="hidden" aria-label="Quick tools dock">
+        <button type="button" data-side="expand" title="Open Panel"><i class="fas fa-chevron-right"></i></button>
+        <button type="button" data-side="locations" title="Locations"><i class="fas fa-map-pin"></i></button>
         <button type="button" data-side="draw" title="Drawing Tools"><i class="fas fa-pen"></i></button>
-        <button type="button" data-side="files" title="الملفات والرفع"><i class="fas fa-folder-open"></i></button>
-        <button type="button" data-side="dashboard" title="لوحة التحليلات"><i class="fas fa-chart-line"></i></button>
-        <button type="button" data-side="settings" title="الإعدادات"><i class="fas fa-cog"></i></button>
+        <button type="button" data-side="files" title="Data &amp; Upload"><i class="fas fa-folder-open"></i></button>
+        <button type="button" data-side="dashboard" title="Dashboard"><i class="fas fa-chart-line"></i></button>
+        <button type="button" data-side="settings" title="Settings"><i class="fas fa-cog"></i></button>
     </div>
     <div class="sidebar" id="sidebar">
         <div class="side-head">
-            <div class="sh-title"><i class="fas fa-satellite-dish"></i> لوحة التحكم</div>
+            <div class="sh-title"><i class="fas fa-satellite-dish"></i> Control Panel</div>
             <div class="sh-actions">
-                <button type="button" class="sh-btn" id="sideCollapse" title="تصغير إلى شريط الأيقونات"><i class="fas fa-chevron-left"></i></button>
+                <button type="button" class="sh-btn" id="sideCollapse" title="Collapse to icon rail"><i class="fas fa-chevron-left"></i></button>
             </div>
         </div>
         <div class="tabs">
-            <button class="active" data-tab="locations"><i class="fas fa-map-pin"></i> المواقع</button>
+            <button class="active" data-tab="locations"><i class="fas fa-map-pin"></i> Locations</button>
             <button data-tab="draw"><i class="fas fa-pen"></i> Draw</button>
-            <button data-tab="files"><i class="fas fa-folder-open"></i> ملفات</button>
-            <button data-tab="dashboard"><i class="fas fa-chart-line"></i> لوحة</button>
-            <button data-tab="settings"><i class="fas fa-cog"></i> إعدادات</button>
+            <button data-tab="files"><i class="fas fa-folder-open"></i> Data</button>
+            <button data-tab="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
+            <button data-tab="settings"><i class="fas fa-cog"></i> Settings</button>
         </div>
 
         <div class="content">
             <!-- تبويب المواقع -->
             <div class="tab-pane active" id="tab-locations">
                 <div class="tab-header">
-                    <h4><i class="fas fa-map-marker-alt"></i> المواقع المضافة</h4>
-                    <button class="add-btn" id="addLocationBtn"><i class="fas fa-plus"></i> إضافة</button>
+                    <h4><i class="fas fa-map-marker-alt"></i> Saved Locations</h4>
+                    <button class="add-btn" id="addLocationBtn"><i class="fas fa-plus"></i> Add</button>
                 </div>
                 <div id="locationsList"></div>
             </div>
@@ -806,22 +806,22 @@
             <!-- تبويب الملفات والرفع -->
             <div class="tab-pane" id="tab-files">
                 <div class="tab-header">
-                    <h4><i class="fas fa-folder-open"></i> رفع واستيراد البيانات</h4>
+                    <h4><i class="fas fa-folder-open"></i> Upload &amp; Import Data</h4>
                 </div>
                 <div class="upload-area" id="uploadArea">
-                    <button type="button" class="upload-btn" id="uploadBtn"><i class="fas fa-upload"></i> رفع ملف جديد</button>
+                    <button type="button" class="upload-btn" id="uploadBtn"><i class="fas fa-upload"></i> Upload New File</button>
                     <input type="file" id="fileInput" accept=".geojson,.json,.kml,.kmz,.dxf,.dwg,.zip,.shp,.shx,.dbf,.prj" multiple style="display:none" />
                     <div class="upload-hint"><i class="fas fa-info-circle"></i> GeoJSON · KML/KMZ · Shapefile (zip) · DXF · DWG→DXF</div>
                     <div class="save-row">
-                        <button type="button" class="save-btn" id="saveDataBtn" title="تنزيل حفظ نسخة على جهازك"><i class="fas fa-save"></i> حفظ على الجهاز</button>
-                        <button type="button" class="export-btn" id="importDataBtn" style="flex:1;" title="فتح ملف محفوظ من جهازك"><i class="fas fa-folder-open"></i> استيراد</button>
+                        <button type="button" class="save-btn" id="saveDataBtn" title="Download a saved copy to your device"><i class="fas fa-save"></i> Save to Device</button>
+                        <button type="button" class="export-btn" id="importDataBtn" style="flex:1;" title="Open a saved file from your device"><i class="fas fa-folder-open"></i> Import</button>
                     </div>
                     <input type="file" id="importDataInput" accept=".json,application/json" style="display:none" />
                     <div class="save-status" id="saveStatus"></div>
                 </div>
-                <div class="coord-hint" style="margin-top:12px"><i class="fas fa-layer-group"></i> تظهر كل الطبقات المرفوعة تلقائياً في لوحة «الطبقات المتقدمة» على يمين الشاشة.</div>
+                <div class="coord-hint" style="margin-top:12px"><i class="fas fa-layer-group"></i> All uploaded layers appear automatically in the &laquo;Advanced Layers&raquo; panel on the right.</div>
                 <div class="tab-header" style="margin-top:16px">
-                    <h4><i class="fas fa-folder"></i> الملفات المرفوعة<span class="file-count-badge" id="fileCount">0</span></h4>
+                    <h4><i class="fas fa-folder"></i> Uploaded Files<span class="file-count-badge" id="fileCount">0</span></h4>
                 </div>
                 <input type="text" id="fileSearch" class="files-search" placeholder="ابحث في الملفات..." />
                 <div class="files-list" id="filesList"></div>
@@ -830,7 +830,7 @@
             <!-- تبويب لوحة التحليلات -->
             <div class="tab-pane" id="tab-dashboard">
                 <div class="tab-header">
-                    <h4><i class="fas fa-chart-line"></i> لوحة التحليلات</h4>
+                    <h4><i class="fas fa-chart-line"></i> Dashboard</h4>
                 </div>
                 <div id="dashBody"></div>
             </div>
@@ -838,47 +838,47 @@
             <!-- تبويب الإعدادات -->
             <div class="tab-pane" id="tab-settings">
                 <div class="tab-header">
-                    <h4><i class="fas fa-cog"></i> إعدادات التطبيق</h4>
+                    <h4><i class="fas fa-cog"></i> Settings</h4>
                 </div>
 
                 <div class="set-sec">
-                    <h5><i class="fas fa-sliders"></i> العرض والوحدات</h5>
+                    <h5><i class="fas fa-sliders"></i> Display &amp; Units</h5>
                     <div class="set-row">
-                        <label>وحدات القياس</label>
+                        <label>Measurement Units</label>
                         <select id="setUnits">
-                            <option value="metric">متري (م / كم²)</option>
-                            <option value="imperial">إنجليزي (قدم / ميل²)</option>
+                            <option value="metric">Metric (m / km²)</option>
+                            <option value="imperial">Imperial (ft / mi²)</option>
                         </select>
                     </div>
                     <div class="set-row">
-                        <label>دقة الإحداثيات</label>
+                        <label>Coordinate Precision</label>
                         <select id="setPrecision">
-                            <option value="3">3 منازل</option>
-                            <option value="5" selected>5 منازل</option>
-                            <option value="7">7 منازل</option>
+                            <option value="3">3 decimals</option>
+                            <option value="5" selected>5 decimals</option>
+                            <option value="7">7 decimals</option>
                         </select>
                     </div>
                     <div class="set-row">
-                        <label>السمة الداكنة</label>
+                        <label>Dark Theme</label>
                         <label class="switch"><input type="checkbox" id="setTheme" checked /><span class="slider"></span></label>
                     </div>
                 </div>
 
                 <div class="set-sec">
-                    <h5><i class="fas fa-map-location-dot"></i> البحث الجغرافي</h5>
+                    <h5><i class="fas fa-map-location-dot"></i> Geocoding</h5>
                     <div class="set-row" style="display:block">
-                        <label style="display:block;margin-bottom:5px">مفتاح Nominatim (اختياري)</label>
-                        <input type="text" id="geoKeyInput" placeholder="الصق المفتاح هنا..." style="width:100%;max-width:100%" />
+                        <label style="display:block;margin-bottom:5px">Nominatim API Key (optional)</label>
+                        <input type="text" id="geoKeyInput" placeholder="Paste key here..." style="width:100%;max-width:100%" />
                     </div>
-                    <button type="button" class="set-btn" id="geoKeySaveBtn"><i class="fas fa-floppy-disk"></i> حفظ المفتاح</button>
+                    <button type="button" class="set-btn" id="geoKeySaveBtn"><i class="fas fa-floppy-disk"></i> Save Key</button>
                     <div class="save-status" id="geoKeyStatus"></div>
-                    <div class="set-note">البحث يعمل تلقائياً بمحرك Photon (مجاني، يدعم العربية). المفتاح اختياري كاحتياطي عبر Nominatim.</div>
+                    <div class="set-note">Search works automatically via Photon (free, multilingual). The key is an optional fallback through Nominatim.</div>
                 </div>
 
                 <div class="set-sec">
-                    <h5><i class="fas fa-database"></i> البيانات والتخزين</h5>
-                    <button type="button" class="set-btn danger" id="clearCacheBtn"><i class="fas fa-trash-can"></i> مسح الذاكرة المؤقتة</button>
-                    <div class="set-note">يمسح بيانات الجلسة المحفوظة والملفات المؤقتة (Service Worker) ثم يعيد تحميل التطبيق.</div>
+                    <h5><i class="fas fa-database"></i> Data &amp; Storage</h5>
+                    <button type="button" class="set-btn danger" id="clearCacheBtn"><i class="fas fa-trash-can"></i> Clear Cache</button>
+                    <div class="set-note">Clears saved session data and temporary files (Service Worker), then reloads the app.</div>
                 </div>
             </div>
         </div>
@@ -1043,13 +1043,13 @@
     <div class="modal modal-wide bs-panel" id="bsPanel">
         <div class="bs-grip" id="dtCollapse"><span></span></div>
         <div class="bs-head">
-            <h3><i class="fas fa-table"></i> <span id="dtTitle">جدول البيانات الوصفية</span></h3>
+            <h3><i class="fas fa-table"></i> <span id="dtTitle">Attribute Table</span></h3>
             <div class="bs-tools">
                 <button type="button" id="attrAddCol" class="attr-btn addcol" title="Add Column"><i class="fas fa-plus"></i><span> Add Column</span></button>
-                <button type="button" id="attrZoomSel" class="attr-btn zoom" title="تكبير للتحديد"><i class="fas fa-search-plus"></i><span> تكبير للتحديد</span></button>
-                <button type="button" id="attrExportExcel" class="attr-btn excel" title="تصدير Excel"><i class="fas fa-file-excel"></i><span> Excel</span></button>
-                <button type="button" id="attrExportCsv" class="attr-btn csv" title="تصدير CSV"><i class="fas fa-file-csv"></i><span> CSV</span></button>
-                <button type="button" id="dtClose" class="attr-btn close" title="إغلاق"><i class="fas fa-times"></i><span> إغلاق</span></button>
+                <button type="button" id="attrZoomSel" class="attr-btn zoom" title="Zoom to selection"><i class="fas fa-search-plus"></i><span> Zoom to Selection</span></button>
+                <button type="button" id="attrExportExcel" class="attr-btn excel" title="Export Excel"><i class="fas fa-file-excel"></i><span> Excel</span></button>
+                <button type="button" id="attrExportCsv" class="attr-btn csv" title="Export CSV"><i class="fas fa-file-csv"></i><span> CSV</span></button>
+                <button type="button" id="dtClose" class="attr-btn close" title="Close"><i class="fas fa-times"></i><span> Close</span></button>
             </div>
         </div>
         <div class="bs-sub"><span id="dtSummary"></span><span id="dtSelection"></span></div>
@@ -1674,7 +1674,7 @@
                 e.stopPropagation();
                 const id = parseInt(this.dataset.id);
                 const cf = customFeaturesData.find(x => x.id === id);
-                if (cf && confirm(`هل تريد حذف "${cf.name}"؟`)) {
+                if (cf && confirm(`Delete "${cf.name}"?`)) {
                     customItems.removeLayer(cf.layer);
                     customFeaturesData = customFeaturesData.filter(x => x.id !== id);
                     if (window.__activeDrawingId === id) window.__activeDrawingId = null;
@@ -2209,7 +2209,7 @@
         if (!sel) return;
         const cols = activeAttrColumns();
         let html = '<option value="">Filter by Field</option>';
-        html += '<option value="name">الاسم</option><option value="desc">الوصف</option><option value="kindLabel">النوع</option>';
+        html += '<option value="name">Name</option><option value="desc">Description</option><option value="kindLabel">Type</option>';
         cols.forEach(function (c) { html += '<option value="' + escapeHtml(c.name) + '">' + escapeHtml(c.name) + '</option>'; });
         sel.innerHTML = html;
         sel.value = attrFieldFilter.field || '';
@@ -2355,12 +2355,12 @@
         attrSource = source || { type: 'custom' };
         attrSelected = null;
         const rows = collectAttrRows();
-        if (!rows.length) { alert('لا توجد سجلات لعرضها في الجدول.'); return; }
+        if (!rows.length) { alert('No records to display in the table.'); return; }
         const title = attrSource.type === 'file'
-            ? ((uploadedFiles.find(f => f.id === attrSource.id) || {}).name || 'جدول البيانات')
+            ? ((uploadedFiles.find(f => f.id === attrSource.id) || {}).name || 'Data Table')
             : (attrSource.type === 'location'
-                ? ((locations.find(l => l.id === attrSource.id) || {}).name || 'بيانات الموقع')
-                : 'العناصر المرسومة (UTM)');
+                ? ((locations.find(l => l.id === attrSource.id) || {}).name || 'Location Data')
+                : 'Drawn Features (UTM)');
         const t = document.getElementById('dtTitle'); if (t) t.textContent = title;
         const s = document.getElementById('dtSearch'); if (s) s.value = '';
         const sel = document.getElementById('dtSelection'); if (sel) sel.textContent = '';
@@ -2419,11 +2419,11 @@
         if (fld && fval) list = list.filter(function (r) { return arNorm(rowFieldValue(r, fld)).includes(fval); });
         const sum = document.getElementById('dtSummary');
         if (sum) sum.textContent = filtering
-            ? `نتائج التصفية: ${list.length} من ${all.length} سجل`
-            : `عدد السجلات: ${all.length} — الإحداثيات بنظام UTM (WGS84 → UTM)`;
+            ? `Filtered: ${list.length} of ${all.length} records`
+            : `${all.length} records — coordinates in UTM (WGS84 → UTM)`;
 
         if (!list.length) {
-            wrap.innerHTML = `<div style="padding:20px;text-align:center;color:#999;">لا توجد نتائج مطابقة</div>`;
+            wrap.innerHTML = `<div style="padding:20px;text-align:center;color:#999;">No matching results</div>`;
             window.__attrList = list;
             if (filtering) applyAttrHighlight([]); else { window.clearFeatureHighlight(); restoreAttrDimming(); }
             return;
@@ -2432,7 +2432,7 @@
         const editable = attrSource.type === 'custom';
         const canEditCols = attrSource.type === 'custom' || attrSource.type === 'file';
         const dynHead = cols.map(function (c) { return `<th>${escapeHtml(c.name)}</th>`; }).join('');
-        const head = `<tr><th>#</th><th>النوع</th><th>الاسم</th><th>الوصف</th><th>Zone</th><th>Easting (E)</th><th>Northing (N)</th><th>الطول (م)</th><th>المساحة (م²)</th>${dynHead}${editable ? '<th>حذف</th>' : ''}</tr>`;
+        const head = `<tr><th>#</th><th>Type</th><th>Name</th><th>Description</th><th>UTM Zone</th><th>Easting (E)</th><th>Northing (N)</th><th>Length (m)</th><th>Area (m²)</th>${dynHead}${editable ? '<th>Actions</th>' : ''}</tr>`;
         let body = '';
         list.forEach((r, i) => {
             const u = featureUTM(r.geojson) || {};
@@ -2470,7 +2470,7 @@
                 }
             });
             const delCell = r.editable
-                ? `<td><button class="attr-row-del" data-id="${r.id}" title="حذف السجل"><i class="fas fa-trash-alt"></i></button></td>`
+                ? `<td><button class="attr-row-del" data-id="${r.id}" title="Delete record"><i class="fas fa-trash-alt"></i></button></td>`
                 : '';
             body += `<tr data-row="${i}">
                 <td class="dt-idx">${r.idx}</td>
@@ -2500,7 +2500,7 @@
                 ev.stopPropagation();
                 const id = parseInt(this.dataset.id);
                 const cf = customFeaturesData.find(x => x.id === id);
-                if (cf && confirm(`هل تريد حذف "${cf.name}"؟`)) {
+                if (cf && confirm(`Delete "${cf.name}"?`)) {
                     customItems.removeLayer(cf.layer);
                     customFeaturesData = customFeaturesData.filter(x => x.id !== id);
                     if (window.__activeDrawingId === id) window.__activeDrawingId = null;
@@ -2520,7 +2520,7 @@
                 wrap.querySelectorAll('tbody tr').forEach(x => x.classList.remove('dt-selected'));
                 tr.classList.add('dt-selected');
                 const sel = document.getElementById('dtSelection');
-                if (sel) sel.textContent = 'محدد: ' + row.name;
+                if (sel) sel.textContent = 'Selected: ' + row.name;
                 return row;
             }
             tr.addEventListener('click', function (ev) {
@@ -2598,7 +2598,7 @@
     }
 
     function openAddColumnModal() {
-        if (attrSource.type === 'location') { showSaveStatus('لا يمكن إضافة أعمدة لبيانات المواقع'); return; }
+        if (attrSource.type === 'location') { showSaveStatus('Cannot add columns to location data'); return; }
         const m = document.getElementById('addColModal');
         const nm = document.getElementById('acName'); if (nm) nm.value = '';
         const ty = document.getElementById('acType'); if (ty) ty.value = 'text';
@@ -2612,13 +2612,13 @@
     function saveAddColumn() {
         const nm = document.getElementById('acName');
         const name = (nm ? nm.value : '').trim();
-        if (!name) { showSaveStatus('يرجى إدخال اسم العمود', true); return; }
+        if (!name) { showSaveStatus('Please enter a column name', true); return; }
         if (/^(utm_zone|utm_easting|utm_northing|utm_hemisphere|length_m|area_m2)$/i.test(name) || /^(name|description|desc|id)$/i.test(name)) {
-            showSaveStatus('هذا الاسم محجوز، اختر اسماً آخر', true); return;
+            showSaveStatus('This name is reserved, choose another', true); return;
         }
         const existing = activeAttrColumns();
         if (existing.some(function (c) { return String(c.name).toLowerCase() === name.toLowerCase(); })) {
-            showSaveStatus('يوجد عمود بهذا الاسم بالفعل', true); return;
+            showSaveStatus('A column with this name already exists', true); return;
         }
         const tyEl = document.getElementById('acType');
         const type = tyEl ? tyEl.value : 'text';
@@ -2641,7 +2641,7 @@
         refreshFieldFilterOptions();
         const s = document.getElementById('dtSearch');
         renderAttrTable(s ? s.value : '');
-        showSaveStatus('✓ تمت إضافة العمود «' + name + '»');
+        showSaveStatus('✓ Column «' + name + '» added');
     }
 
     function buildFeatureRows() {
@@ -2650,11 +2650,11 @@
             const u = featureUTM(cf.geojson) || {};
             const len = featureLengthM(cf.geojson), area = featureAreaM2(cf.geojson);
             const row = {
-                '#': i + 1, 'ID': cf.id, 'النوع': ATTR_TYPE_LABEL[cf.kind] || cf.kind, 'الاسم': cf.name, 'الوصف': cf.desc || '',
-                'Zone': u.zone || '', 'Hemisphere': u.hemisphere || '',
+                '#': i + 1, 'ID': cf.id, 'Type': ATTR_TYPE_LABEL[cf.kind] || cf.kind, 'Name': cf.name, 'Description': cf.desc || '',
+                'UTM Zone': u.zone || '', 'Hemisphere': u.hemisphere || '',
                 'Easting (E)': isFinite(u.easting) ? +u.easting.toFixed(3) : '',
                 'Northing (N)': isFinite(u.northing) ? +u.northing.toFixed(3) : '',
-                'الطول (م)': len ? +len.toFixed(2) : '', 'المساحة (م²)': area ? +area.toFixed(2) : ''
+                'Length (m)': len ? +len.toFixed(2) : '', 'Area (m²)': area ? +area.toFixed(2) : ''
             };
             (cols || []).forEach(function (c) {
                 const v = (cf.geojson && cf.geojson.properties) ? cf.geojson.properties[c.name] : '';
@@ -2669,7 +2669,7 @@
         customFeaturesData.forEach(cf => {
             featureVerticesUTM(cf.geojson).forEach((v, vi) => {
                 rows.push({
-                    'ID العنصر': cf.id, 'الاسم': cf.name, 'النوع': ATTR_TYPE_LABEL[cf.kind] || cf.kind, 'رقم الرأس': vi + 1,
+                    'Feature ID': cf.id, 'Name': cf.name, 'Type': ATTR_TYPE_LABEL[cf.kind] || cf.kind, 'Vertex No': vi + 1,
                     'Latitude': +v.lat.toFixed(6), 'Longitude': +v.lng.toFixed(6), 'Zone': v.zone, 'Hemisphere': v.hemisphere,
                     'Easting (E)': +v.easting.toFixed(3), 'Northing (N)': +v.northing.toFixed(3)
                 });
@@ -2680,7 +2680,7 @@
 
     function exportAttrExcel() {
         const rows = collectAttrRows();
-        if (!rows.length) { alert('لا توجد سجلات للتصدير.'); return; }
+        if (!rows.length) { alert('No records to export.'); return; }
         const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
         if (typeof XLSX === 'undefined') { exportAttrCsv(); return; }
         const wb = XLSX.utils.book_new();
@@ -2689,15 +2689,15 @@
             const data = rows.map(r => {
                 const u = featureUTM(r.geojson) || {};
                 const len = featureLengthM(r.geojson), area = featureAreaM2(r.geojson);
-                const obj = { '#': r.idx, 'النوع': r.kindLabel, 'الاسم': r.name, 'الوصف': r.desc,
-                    'Zone': u.zone || '', 'Hemisphere': u.hemisphere || '',
+                const obj = { '#': r.idx, 'Type': r.kindLabel, 'Name': r.name, 'Description': r.desc,
+                    'UTM Zone': u.zone || '', 'Hemisphere': u.hemisphere || '',
                     'Easting (E)': isFinite(u.easting) ? +u.easting.toFixed(3) : '',
                     'Northing (N)': isFinite(u.northing) ? +u.northing.toFixed(3) : '',
-                    'الطول (م)': len ? +len.toFixed(2) : '', 'المساحة (م²)': area ? +area.toFixed(2) : '' };
+                    'Length (m)': len ? +len.toFixed(2) : '', 'Area (m²)': area ? +area.toFixed(2) : '' };
                 fcols.forEach(function (c) { obj[c.name] = (r.geojson && r.geojson.properties && r.geojson.properties[c.name] != null) ? r.geojson.properties[c.name] : ''; });
                 return obj;
             });
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'السجلات');
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Records');
             XLSX.writeFile(wb, 'table-' + stamp + '.xlsx');
             return;
         }
@@ -2706,15 +2706,15 @@
         ws1['!cols'] = [{ wch: 4 }, { wch: 5 }, { wch: 8 }, { wch: 20 }, { wch: 24 }, { wch: 6 }, { wch: 6 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 14 }];
         const ws2 = XLSX.utils.json_to_sheet(verts);
         ws2['!cols'] = [{ wch: 10 }, { wch: 20 }, { wch: 8 }, { wch: 9 }, { wch: 12 }, { wch: 12 }, { wch: 6 }, { wch: 6 }, { wch: 14 }, { wch: 14 }];
-        XLSX.utils.book_append_sheet(wb, ws1, 'العناصر');
-        XLSX.utils.book_append_sheet(wb, ws2, 'الإحداثيات');
+        XLSX.utils.book_append_sheet(wb, ws1, 'Features');
+        XLSX.utils.book_append_sheet(wb, ws2, 'Vertices');
         try {
             if (typeof coordPoints !== 'undefined' && coordPoints.length) {
                 const crows = coordPoints.map((p, i) => {
                     const u = wgs84ToUTM(p.lat, p.lng);
-                    return { '#': i + 1, 'الاسم': 'نقطة ' + (i + 1), 'Latitude': +p.lat.toFixed(6), 'Longitude': +p.lng.toFixed(6), 'Zone': u.zone, 'Hemisphere': u.hemisphere, 'Easting (E)': +u.easting.toFixed(3), 'Northing (N)': +u.northing.toFixed(3) };
+                    return { '#': i + 1, 'Name': 'Point ' + (i + 1), 'Latitude': +p.lat.toFixed(6), 'Longitude': +p.lng.toFixed(6), 'UTM Zone': u.zone, 'Hemisphere': u.hemisphere, 'Easting (E)': +u.easting.toFixed(3), 'Northing (N)': +u.northing.toFixed(3) };
                 });
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crows), 'نقاط الإحداثيات');
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(crows), 'Coordinate Points');
             }
         } catch (e) {}
         XLSX.writeFile(wb, 'attribute-utm-' + stamp + '.xlsx');
@@ -2722,10 +2722,10 @@
 
     function exportAttrCsv() {
         const rows = collectAttrRows();
-        if (!rows.length) { alert('لا توجد سجلات للتصدير.'); return; }
+        if (!rows.length) { alert('No records to export.'); return; }
         const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
         const cols = activeAttrColumns();
-        const keys = ['#', 'النوع', 'الاسم', 'الوصف', 'Zone', 'Hemisphere', 'Easting (E)', 'Northing (N)', 'الطول (م)', 'المساحة (م²)'].concat(cols.map(function (c) { return c.name; }));
+        const keys = ['#', 'Type', 'Name', 'Description', 'UTM Zone', 'Hemisphere', 'Easting (E)', 'Northing (N)', 'Length (m)', 'Area (m²)'].concat(cols.map(function (c) { return c.name; }));
         const esc = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
         const lines = [keys.join(',')];
         rows.forEach(r => {
@@ -2758,7 +2758,7 @@
         const zoomBtn = document.getElementById('attrZoomSel');
         if (zoomBtn) zoomBtn.addEventListener('click', function () {
             const row = attrSelected != null ? (window.__attrList || [])[attrSelected] : null;
-            if (!row) { showSaveStatus('اختر سجلاً من الجدول أولاً'); return; }
+            if (!row) { showSaveStatus('Select a record in the table first'); return; }
             window.selectFeatureOnMap(row.geojson, true);
         });
         const xlBtn = document.getElementById('attrExportExcel');
@@ -4158,50 +4158,50 @@
             if (!file) return;
             const tKey = gtypeKey || 'polygon';
             const st = getLayerStyle(file.name, tKey);
-            const typeLabels = { point:'نقاط', line:'خطوط', polygon:'مضلعات' };
+            const typeLabels = { point:'Points', line:'Lines', polygon:'Polygons' };
             const col = st.color || '#1a5a8a';
             let colorsHtml = '';
             colorPalette.forEach(c => {
                 colorsHtml += `<div class="cp-color ${c.toLowerCase()===col.toLowerCase()?'sel':''}" style="background:${c};" onclick="this.parentNode.querySelectorAll('.cp-color').forEach(x=>x.classList.remove('sel')); this.classList.add('sel'); window.changeItemColor('file',${id},'${c}','${tKey}')"></div>`;
             });
             const sizeRow = tKey === 'point' ? `
-                <div class="cp-row"><label>حجم النقطة <span class="cp-value" id="cpRadiusVal">${st.radius||9}</span> px</label>
+                <div class="cp-row"><label>Point Size <span class="cp-value" id="cpRadiusVal">${st.radius||9}</span> px</label>
                 <input type="range" class="cp-range" min="3" max="30" value="${st.radius||9}" oninput="document.getElementById('cpRadiusVal').textContent=this.value; window.changeItemRadius('file',${id},this.value,'point')" /></div>` : '';
             panel.innerHTML = `
-                <h3><i class="fas fa-sliders-h" style="color:#0e8f8a;"></i> ضبط الطبقة</h3>
+                <h3><i class="fas fa-sliders-h" style="color:#0e8f8a;"></i> Layer Styling</h3>
                 <div class="cp-desc">${escapeHtml(file.name)} — ${typeLabels[tKey]||''}</div>
-                <div class="cp-row"><label>اللون</label>
+                <div class="cp-row"><label>Color</label>
                     <div class="cp-colors">${colorsHtml}</div>
                     <input type="color" class="cp-input" value="${col}" onchange="window.changeItemColor('file',${id},this.value,'${tKey}')" /></div>
-                <div class="cp-row"><label>السمك <span class="cp-value" id="cpWVal">${st.weight||2.5}</span> px</label>
+                <div class="cp-row"><label>Weight <span class="cp-value" id="cpWVal">${st.weight||2.5}</span> px</label>
                     <input type="range" class="cp-range" min="1" max="15" value="${st.weight||2.5}" oninput="document.getElementById('cpWVal').textContent=this.value; window.changeItemWeight('file',${id},this.value,'${tKey}');" /></div>
-                <div class="cp-row"><label>الشفافية <span class="cp-value" id="cpOVal">${Math.round((st.opacity!==undefined?st.opacity:1)*100)}%</span></label>
+                <div class="cp-row"><label>Opacity <span class="cp-value" id="cpOVal">${Math.round((st.opacity!==undefined?st.opacity:1)*100)}%</span></label>
                     <input type="range" class="cp-range" min="0" max="1" step="0.05" value="${st.opacity!==undefined?st.opacity:1}" oninput="document.getElementById('cpOVal').textContent=Math.round(this.value*100)+'%'; window.changeItemOpacity('file',${id},this.value,'${tKey}');" /></div>
                 ${sizeRow}
                 <div class="cp-sym">
-                    <div class="cp-sym-head"><i class="fas fa-palette" style="color:#0e8f8a;"></i> التصنيف (Symbology) — أسلوب ArcGIS</div>
-                    <div class="cp-row"><label>الحقل</label>
+                    <div class="cp-sym-head"><i class="fas fa-palette" style="color:#0e8f8a;"></i> Symbology — ArcGIS style</div>
+                    <div class="cp-row"><label>Field</label>
                         <select class="cp-select" id="symField" onchange="window.symFieldChange('${file.name}','${tKey}')">
-                            <option value="">اختر حقل التصنيف...</option>
+                            <option value="">Select a classification field...</option>
                             ${availableFields(file.name, tKey).map(fld => {
                                 const cur = (file && layerStyles[file.name] && layerStyles[file.name].types && layerStyles[file.name].types[tKey] && layerStyles[file.name].types[tKey].symbology) || {};
                                 return `<option value="${escapeHtml(fld)}" ${cur.field===fld?'selected':''}>${escapeHtml(fld)}</option>`;
                             }).join('')}
                         </select></div>
-                    <div class="cp-row"><label>الطريقة</label>
+                    <div class="cp-row"><label>Method</label>
                         <div class="cp-sym-modes">
-                            <button class="sym-mode ${(!(file && layerStyles[file.name] && layerStyles[file.name].types && layerStyles[file.name].types[tKey] && layerStyles[file.name].types[tKey].symbology) || (file && layerStyles[file.name] && layerStyles[file.name].types && layerStyles[file.name].types[tKey] && layerStyles[file.name].types[tKey].symbology.mode==='none'))?'on':''}" onclick="window.symMode('${file.name}','${tKey}','none')">بدون</button>
+                            <button class="sym-mode ${(!(file && layerStyles[file.name] && layerStyles[file.name].types && layerStyles[file.name].types[tKey] && layerStyles[file.name].types[tKey].symbology) || (file && layerStyles[file.name] && layerStyles[file.name].types && layerStyles[file.name].types[tKey] && layerStyles[file.name].types[tKey].symbology.mode==='none'))?'on':''}" onclick="window.symMode('${file.name}','${tKey}','none')">None</button>
                             <button class="sym-mode ${(file && layerStyles[file.name] && layerStyles[file.name].types && layerStyles[file.name].types[tKey] && layerStyles[file.name].types[tKey].symbology && layerStyles[file.name].types[tKey].symbology.mode==='unique')?'on':''}" onclick="window.symMode('${file.name}','${tKey}','unique')">قيم فريدة</button>
                             <button class="sym-mode ${(file && layerStyles[file.name] && layerStyles[file.name].types && layerStyles[file.name].types[tKey] && layerStyles[file.name].types[tKey].symbology && layerStyles[file.name].types[tKey].symbology.mode==='graduated')?'on':''}" onclick="window.symMode('${file.name}','${tKey}','graduated')">متدرج</button>
                         </div></div>
-                    <div class="cp-row" id="symNumRow" style="${(file && layerStyles[file.name] && layerStyles[file.name].types && layerStyles[file.name].types[tKey] && layerStyles[file.name].types[tKey].symbology && layerStyles[file.name].types[tKey].symbology.mode==='graduated')?'':'display:none'}" ><label>عدد الأصناف <span class="cp-value" id="symNumVal">${(file&&layerStyles[file.name]&&layerStyles[file.name].types&&layerStyles[file.name].types[tKey]&&layerStyles[file.name].types[tKey].symbology&&layerStyles[file.name].types[tKey].symbology.numClasses)||5}</span></label>
+                    <div class="cp-row" id="symNumRow" style="${(file && layerStyles[file.name] && layerStyles[file.name].types && layerStyles[file.name].types[tKey] && layerStyles[file.name].types[tKey].symbology && layerStyles[file.name].types[tKey].symbology.mode==='graduated')?'':'display:none'}" ><label>Number of Classes <span class="cp-value" id="symNumVal">${(file&&layerStyles[file.name]&&layerStyles[file.name].types&&layerStyles[file.name].types[tKey]&&layerStyles[file.name].types[tKey].symbology&&layerStyles[file.name].types[tKey].symbology.numClasses)||5}</span></label>
                         <input type="range" class="cp-range" min="2" max="10" value="${(file&&layerStyles[file.name]&&layerStyles[file.name].types&&layerStyles[file.name].types[tKey]&&layerStyles[file.name].types[tKey].symbology&&layerStyles[file.name].types[tKey].symbology.numClasses)||5}" oninput="document.getElementById('symNumVal').textContent=this.value; window.symApply('${file.name}','${tKey}')" /></div>
                     <div class="cp-sym-legend" id="symLegend">${buildSymLegendHTML(file.name, tKey)}</div>
                 </div>
                 <div class="cp-footer">
-                    <button class="cp-apply" onclick="window.zoomToItem('file',${id})"><i class="fas fa-search-plus"></i> تكبير</button>
-                    <button class="cp-save" onclick="window.saveAppData()"><i class="fas fa-save"></i> حفظ</button>
-                    <button class="cp-close" onclick="window.closeControlPanel()">إغلاق</button>
+                    <button class="cp-apply" onclick="window.zoomToItem('file',${id})"><i class="fas fa-search-plus"></i> Zoom</button>
+                    <button class="cp-save" onclick="window.saveAppData()"><i class="fas fa-save"></i> Save</button>
+                    <button class="cp-close" onclick="window.closeControlPanel()">Close</button>
                 </div>`;
         } else if (type === 'custom') {
             const cf = customFeaturesData.find(c => c.id === id);
@@ -4212,23 +4212,23 @@
                 colorsHtml += `<div class="cp-color ${c.toLowerCase()===col.toLowerCase()?'sel':''}" style="background:${c};" onclick="this.parentNode.querySelectorAll('.cp-color').forEach(x=>x.classList.remove('sel')); this.classList.add('sel'); window.changeItemColor('custom',${id},'${c}')"></div>`;
             });
             const sizeRow = (cf.kind === 'نقطة') ? `
-                <div class="cp-row"><label>الحجم <span class="cp-value" id="cpSVal">${cf.size||26}</span> px</label>
+                <div class="cp-row"><label>Size <span class="cp-value" id="cpSVal">${cf.size||26}</span> px</label>
                 <input type="range" class="cp-range" min="12" max="60" value="${cf.size||26}" oninput="document.getElementById('cpSVal').textContent=this.value; window.changeItemRadius('custom',${id},this.value,'point');" /></div>` : '';
             panel.innerHTML = `
-                <h3><i class="fas fa-sliders-h" style="color:#0e8f8a;"></i> ضبط العنصر</h3>
+                <h3><i class="fas fa-sliders-h" style="color:#0e8f8a;"></i> Feature Styling</h3>
                 <div class="cp-desc">${escapeHtml(cf.name)} — ${escapeHtml(cf.desc || cf.kind)}</div>
-                <div class="cp-row"><label>اللون</label><div class="cp-colors">${colorsHtml}</div>
+                <div class="cp-row"><label>Color</label><div class="cp-colors">${colorsHtml}</div>
                     <input type="color" class="cp-input" value="${col}" onchange="window.changeItemColor('custom',${id},this.value)" /></div>
                 ${cf.kind !== 'نص' && cf.kind !== 'نقطة' ? `
-                <div class="cp-row"><label>السمك <span class="cp-value" id="cpWVal">${cf.weight||3}</span> px</label>
+                <div class="cp-row"><label>Weight <span class="cp-value" id="cpWVal">${cf.weight||3}</span> px</label>
                     <input type="range" class="cp-range" min="1" max="15" value="${cf.weight||3}" oninput="document.getElementById('cpWVal').textContent=this.value; window.changeItemWeight('custom',${id},this.value);" /></div>` : ''}
-                <div class="cp-row"><label>الشفافية <span class="cp-value" id="cpOVal">${Math.round((cf.opacity!==undefined?cf.opacity:1)*100)}%</span></label>
+                <div class="cp-row"><label>Opacity <span class="cp-value" id="cpOVal">${Math.round((cf.opacity!==undefined?cf.opacity:1)*100)}%</span></label>
                     <input type="range" class="cp-range" min="0" max="1" step="0.05" value="${cf.opacity!==undefined?cf.opacity:1}" oninput="document.getElementById('cpOVal').textContent=Math.round(this.value*100)+'%'; window.changeItemOpacity('custom',${id},this.value);" /></div>
                 ${sizeRow}
                 <div class="cp-footer">
-                    <button class="cp-apply" onclick="window.zoomToItem('custom',${id})"><i class="fas fa-search-plus"></i> تكبير</button>
-                    <button class="cp-save" onclick="window.saveAppData()"><i class="fas fa-save"></i> حفظ</button>
-                    <button class="cp-close" onclick="window.closeControlPanel()">إغلاق</button>
+                    <button class="cp-apply" onclick="window.zoomToItem('custom',${id})"><i class="fas fa-search-plus"></i> Zoom</button>
+                    <button class="cp-save" onclick="window.saveAppData()"><i class="fas fa-save"></i> Save</button>
+                    <button class="cp-close" onclick="window.closeControlPanel()">Close</button>
                 </div>`;
         } else if (type === 'location') {
             const loc = locations.find(l => l.id === id);
@@ -4239,14 +4239,14 @@
                 colorsHtml += `<div class="cp-color ${c.toLowerCase()===col.toLowerCase()?'sel':''}" style="background:${c};" onclick="this.parentNode.querySelectorAll('.cp-color').forEach(x=>x.classList.remove('sel')); this.classList.add('sel'); window.changeItemColor('location',${id},'${c}')"></div>`;
             });
             panel.innerHTML = `
-                <h3><i class="fas fa-map-pin" style="color:#e63946;"></i> ضبط الموقع</h3>
+                <h3><i class="fas fa-map-pin" style="color:#e63946;"></i> Location Styling</h3>
                 <div class="cp-desc">${escapeHtml(loc.name)} — ${escapeHtml(loc.desc)}</div>
-                <div class="cp-row"><label>لون الموقع</label><div class="cp-colors">${colorsHtml}</div>
+                <div class="cp-row"><label>Location Color</label><div class="cp-colors">${colorsHtml}</div>
                     <input type="color" class="cp-input" value="${col}" onchange="window.changeItemColor('location',${id},this.value)" /></div>
                 <div class="cp-footer">
-                    <button class="cp-apply" onclick="window.zoomToItem('location',${id})"><i class="fas fa-search-plus"></i> تكبير</button>
-                    <button class="cp-save" onclick="window.saveAppData()"><i class="fas fa-save"></i> حفظ</button>
-                    <button class="cp-close" onclick="window.closeControlPanel()">إغلاق</button>
+                    <button class="cp-apply" onclick="window.zoomToItem('location',${id})"><i class="fas fa-search-plus"></i> Zoom</button>
+                    <button class="cp-save" onclick="window.saveAppData()"><i class="fas fa-save"></i> Save</button>
+                    <button class="cp-close" onclick="window.closeControlPanel()">Close</button>
                 </div>`;
         }
         overlay.classList.add('active');
