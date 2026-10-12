@@ -32,13 +32,33 @@
         try { return new Date(iso).toLocaleString(); } catch (e) { return iso || ''; }
     }
 
+    function errMsg(err) {
+        var m = (err && (err.message || err.error_description || err.msg || err.hint)) || String(err || '');
+        if (/failed to fetch|networkerror|load failed|fetch failed/i.test(m)) {
+            return 'تعذّر الوصول لسيرفر Supabase — راجع Project URL واتصال الإنترنت';
+        }
+        if (/invalid api key|invalidapikey/i.test(m)) return 'مفتاح anon غير صحيح';
+        if (/email not confirmed/i.test(m)) return 'لازم تأكيد البريد أولًا (أو عطّل Confirm email في Supabase)';
+        if (/user already registered/i.test(m)) return 'هذا البريد مسجّل بالفعل — جرّب تسجيل الدخول';
+        if (/password should be at least/i.test(m)) return 'كلمة المرور قصيرة (٦ أحرف على الأقل)';
+        return m;
+    }
+
+    function normUrl(u) {
+        u = String(u || '').trim().replace(/\s+/g, '');
+        if (!u) return '';
+        if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+        try { return new URL(u).origin; } catch (e) { return u.replace(/\/+$/, ''); }
+    }
+    function normKey(k) { return String(k || '').trim().replace(/\s+/g, ''); }
+
     function toast(msg, type) {
         if (typeof window.showToast === 'function') { try { window.showToast(msg, type || 'info'); return; } catch (e) {} }
         var t = document.createElement('div');
         t.textContent = msg;
         t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;background:#0f172a;color:#e2e8f0;border:1px solid #334155;padding:10px 16px;border-radius:10px;font:600 13px system-ui;box-shadow:0 8px 24px rgba(0,0,0,.4)';
         document.body.appendChild(t);
-        setTimeout(function () { try { t.remove(); } catch (e) {} }, 3400);
+        setTimeout(function () { try { t.remove(); } catch (e) {} }, 4200);
     }
 
     var CARD = 'background:var(--card-bg,#1e293b);border:1px solid var(--card-brd,#334155);border-radius:10px;padding:12px;';
@@ -84,11 +104,22 @@
     }
 
     function setConfig(url, key) {
-        SB_URL = (url || '').trim();
-        SB_KEY = (key || '').trim();
+        SB_URL = normUrl(url);
+        SB_KEY = normKey(key);
         localStorage.setItem(LS_URL, SB_URL);
         localStorage.setItem(LS_KEY, SB_KEY);
         client = null;
+    }
+
+    function testConnection(url, key) {
+        if (!url || !key) { toast('أدخل الرابط والمفتاح أولًا', 'error'); return; }
+        toast('جارٍ اختبار الاتصال...', 'info');
+        fetch(url.replace(/\/+$/, '') + '/auth/v1/health', { headers: { apikey: key } })
+            .then(function (r) {
+                if (r.ok || r.status === 200 || r.status === 401) toast('الاتصال بسيرفر Supabase ناجح ✅', 'success');
+                else toast('وصل السيرفر لكن الرد: HTTP ' + r.status, 'info');
+            })
+            .catch(function () { toast('فشل الاتصال ❌ — راجع Project URL والإنترنت', 'error'); });
     }
 
     // ---------- project stats from live app ----------
@@ -166,7 +197,7 @@
                 projectsLoaded = false;
                 return ensureProjects();
             })
-            .catch(function (e) { toast('فشل الحفظ: ' + (e.message || e), 'error'); });
+            .catch(function (e) { toast('فشل الحفظ: ' + errMsg(e), 'error'); });
     }
 
     function ensureProjects() {
@@ -179,7 +210,7 @@
                 projectsLoaded = true;
                 fillList();
             })
-            .catch(function (e) { toast('فشل جلب المشاريع: ' + e.message, 'error'); });
+            .catch(function (e) { toast('فشل جلب المشاريع: ' + errMsg(e), 'error'); });
     }
 
     function loadProject(id) {
@@ -192,7 +223,7 @@
                 window.applyPayload(r.data.data || {});
                 toast('تم تحميل المشروع: ' + (r.data.name || ''), 'success');
             })
-            .catch(function (e) { toast('فشل التحميل: ' + e.message, 'error'); });
+            .catch(function (e) { toast('فشل التحميل: ' + errMsg(e), 'error'); });
     }
 
     function deleteProject(id, name) {
@@ -205,7 +236,7 @@
                 toast('تم الحذف', 'info');
                 fillList();
             })
-            .catch(function (e) { toast('فشل الحذف: ' + e.message, 'error'); });
+            .catch(function (e) { toast('فشل الحذف: ' + errMsg(e), 'error'); });
     }
 
     // ---------- UI ----------
@@ -228,6 +259,7 @@
             '<input data-f="url" type="text" placeholder="https://xxxx.supabase.co" value="' + esc(SB_URL) + '" style="' + INPUT + '">' +
             '<input data-f="key" type="text" placeholder="anon public key" value="' + esc(SB_KEY) + '" style="' + INPUT + '">' +
             '<button data-act="savecfg" style="' + BTN + '"><i class="fas fa-link"></i> حفظ الإعدادات</button>' +
+            '<button data-act="testconn" style="' + BTN2 + 'width:100%;box-sizing:border-box;padding:9px;text-align:center"><i class="fas fa-plug-circle-check"></i> اختبار الاتصال</button>' +
             '</div>';
     }
     function wireConfig() {
@@ -235,9 +267,17 @@
             var u = root.querySelector('[data-f="url"]').value;
             var k = root.querySelector('[data-f="key"]').value;
             if (!u || !k) { toast('أدخل الرابط والمفتاح', 'error'); return; }
-            setConfig(u, k);
+            var nu = normUrl(u);
+            if (!/^https:\/\/[^\s/]+\.supabase\.co$/i.test(nu)) {
+                if (!confirm('الرابط لا يشبه رابط Supabase المعتاد (https://xxxx.supabase.co).\nالمُدخل بعد التصحيح: ' + nu + '\n\nهل تريد المتابعة؟')) return;
+            }
+            setConfig(nu, k);
             toast('تم حفظ إعدادات Supabase', 'success');
             render();
+        });
+        var test = root.querySelector('[data-act="testconn"]');
+        if (test) test.addEventListener('click', function () {
+            testConnection(normUrl(root.querySelector('[data-f="url"]').value), normKey(root.querySelector('[data-f="key"]').value));
         });
     }
 
@@ -260,12 +300,12 @@
         root.querySelector('[data-act="login"]').addEventListener('click', function () {
             var c = creds();
             if (!c.e || !c.p) { toast('أدخل البريد وكلمة المرور', 'error'); return; }
-            signIn(c.e, c.p).catch(function (err) { toast('فشل الدخول: ' + (err.message || err), 'error'); });
+            signIn(c.e, c.p).catch(function (err) { toast(errMsg(err), 'error'); });
         });
         root.querySelector('[data-act="register"]').addEventListener('click', function () {
             var c = creds();
             if (!c.e || !c.p) { toast('أدخل البريد وكلمة المرور', 'error'); return; }
-            signUp(c.e, c.p).catch(function (err) { toast('فشل التسجيل: ' + (err.message || err), 'error'); });
+            signUp(c.e, c.p).catch(function (err) { toast(errMsg(err), 'error'); });
         });
         root.querySelector('[data-act="forget"]').addEventListener('click', function () {
             if (!confirm('مسح إعدادات الربط بمشروع Supabase؟')) return;
@@ -276,7 +316,7 @@
     }
 
     function renderList() {
-        if (!projects.length) return '<div data-list-empty style="' + HINT + '">لا توجد مشاريع محفوظة بعد.</div>';
+        if (!projects.length) return '<div style="' + HINT + '">لا توجد مشاريع محفوظة بعد.</div>';
         return projects.map(function (p) {
             return '<div style="' + CARD + 'margin-bottom:8px">' +
                 '<div style="font-weight:700;color:var(--txt,#e2e8f0);margin-bottom:2px">' + esc(p.name) + '</div>' +
@@ -325,7 +365,7 @@
         var save = root.querySelector('[data-act="save"]');
         if (save) save.addEventListener('click', function () {
             var nm = root.querySelector('[data-f="name"]');
-            saveProject(nm ? nm.value : '').catch(function (e) { toast('فشل: ' + e.message, 'error'); });
+            saveProject(nm ? nm.value : '').catch(function (e) { toast('فشل: ' + errMsg(e), 'error'); });
         });
         var so = root.querySelector('[data-act="signout"]');
         if (so) so.addEventListener('click', function () { signOut(); });
@@ -354,13 +394,14 @@
     window.GIS.cloud = {
         configured: configured,
         setConfig: setConfig,
+        testConnection: testConnection,
         signIn: signIn,
         signUp: signUp,
         signOut: signOut,
         saveProject: saveProject,
         loadProject: loadProject,
         deleteProject: deleteProject,
-        refresh: function () { projectsLoaded = false; return ensureProjects(); },
+        refreshProjects: ensureProjects,
         projectStats: projectStats,
         getUser: function () { return user; },
         render: render
