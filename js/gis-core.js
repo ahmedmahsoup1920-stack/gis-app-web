@@ -25,6 +25,53 @@
     var PANEL_BODY = null;
     var ACTIVE = null;
 
+    /* ---------- Category (accordion) metadata — professional English labels ---------- */
+    var GROUP_META = {
+        'Spatial Analysis':      { order: 10, icon: 'fa-layer-group' },
+        'Analysis Tools':        { order: 20, icon: 'fa-chart-simple' },
+        'Measurements':          { order: 30, icon: 'fa-ruler-combined' },
+        'Editing & Location':    { order: 40, icon: 'fa-pen-ruler' },
+        'Visualization':         { order: 50, icon: 'fa-palette' },
+        'Quality & Validation':  { order: 60, icon: 'fa-shield-halved' },
+        'Export & Workspace':    { order: 70, icon: 'fa-briefcase' },
+        'System':                { order: 90, icon: 'fa-gear' }
+    };
+    function groupMeta(name) {
+        return GROUP_META[name] || { order: 80, icon: 'fa-toolbox' };
+    }
+
+    /* ---------- Professional English metadata for each module (nav + panel titles) ---------- */
+    var MODULE_META = {
+        'system-info':  { title: 'System Info',             group: 'System',               description: 'Base layer, map state, and viewport dimensions.' },
+        'buffer':       { title: 'Buffer Zones',            group: 'Spatial Analysis',     description: 'Create a buffer zone around features and count intersections.' },
+        'filter':       { title: 'Visual Filter',           group: 'Spatial Analysis',     description: 'Build multi-condition filters and highlight matching features.' },
+        'heatmap':      { title: 'Heatmap',                 group: 'Visualization',        description: 'Render point density as a heatmap with radius and blur control.' },
+        'spatial-join': { title: 'Spatial Join',            group: 'Spatial Analysis',     description: 'Count points within polygons and write results as fields.' },
+        'gps':          { title: 'GPS & Tracking',          group: 'Editing & Location',   description: 'Locate your real position, track the path, and snap to vertices.' },
+        'edit':         { title: 'Geometry Editor',         group: 'Editing & Location',   description: 'Move, add, or delete custom vertices with area/length recalculation.' },
+        'topology':     { title: 'Topology Check',          group: 'Quality & Validation', description: 'Detect duplicates, repeated vertices, self-intersections, and overlaps.' },
+        'measure':      { title: 'Measurement & Coordinates', group: 'Measurements',       description: 'Live coordinate readout (decimal/DMS/UTM) with cumulative totals.' },
+        'swipe':        { title: 'Map Swipe Compare',       group: 'Visualization',        description: 'Drag a vertical divider to compare two base maps.' },
+        'bi':           { title: 'BI Dashboard',            group: 'Analysis Tools',       description: 'Statistical charts and graphs built from layer fields.' },
+        'project':      { title: 'Project File',            group: 'Export & Workspace',   description: 'Save the whole session to one file and reload it later.' },
+        'elevation':    { title: 'Elevation Profile',       group: 'Spatial Analysis',     description: 'Draw an elevation profile for a line/polygon using DEM data.' },
+        'extrude':      { title: '3D Extrusion',            group: 'Visualization',        description: 'Extrude polygons into 3D solids using a numeric height field.' },
+        'print':        { title: 'Print Layout',            group: 'Export & Workspace',   description: 'Compose a print layout (title/legend/scale/north arrow) and export to PDF.' },
+        'geoprocessing':{ title: 'Geoprocessing',           group: 'Spatial Analysis',     description: 'Clip, intersect, union, and dissolve between two polygon layers.' },
+        'network':      { title: 'Network Analysis',        group: 'Spatial Analysis',     description: 'Trace a connected network from a line feature and find the nearest neighbour.' },
+        'commands':     { title: 'Command Palette',         group: 'Export & Workspace',   description: 'Quick search to open any module, plus a short usage guide.' },
+        'voronoi':      { title: 'Service Areas (Thiessen)',group: 'Spatial Analysis',     description: 'Thiessen (Voronoi) service areas for points plus the convex hull.' },
+        'timeline':     { title: 'Time Slider',             group: 'Visualization',        description: 'Reveal features progressively by a temporal or numeric field.' },
+        'labels':       { title: 'Labels',                  group: 'Visualization',        description: 'Show feature labels from a field with size and colour control.' }
+    };
+    function applyModuleMeta(def) {
+        var m = MODULE_META[def.id];
+        if (!m) { return; }
+        if (m.title) { def.title = m.title; }
+        if (m.group) { def.group = m.group; }
+        if (m.description) { def.description = m.description; }
+    }
+
     function log() { try { console.log.apply(console, ['[GIS]'].concat([].slice.call(arguments))); } catch (e) {} }
     function warn() { try { console.warn.apply(console, ['[GIS]'].concat([].slice.call(arguments))); } catch (e) {} }
     function safe(fn, label) { try { return fn(); } catch (e) { warn('خطأ في ' + (label || 'وحدة'), e); return null; } }
@@ -82,6 +129,21 @@
             '.gis-mod-card .gis-mod-desc{font-size:11px;color:var(--txt-dim,#94a3b8);line-height:1.5;}',
             '.gis-mod-card.is-soon{opacity:.5;cursor:default;}',
             '.gis-mod-card.is-error{border-color:#ef4444;}',
+            '.gis-mod-acc{border:1px solid var(--card-brd,#334155);border-radius:12px;margin-bottom:8px;overflow:hidden;background:rgba(255,255,255,.02);}',
+            '.gis-mod-acc-head{width:100%;display:flex;align-items:center;gap:9px;padding:11px 12px;border:none;background:linear-gradient(90deg,rgba(2,132,199,.14),transparent);color:var(--txt,#e2e8f0);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;text-align:left;transition:background .2s ease;}',
+            '.gis-mod-acc-head:hover{background:rgba(2,132,199,.20);}',
+            '.gis-mod-acc-ic{width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:rgba(2,132,199,.20);color:#7dd3fc;font-size:12px;flex-shrink:0;}',
+            '.gis-mod-acc-label{flex:1;min-width:0;}',
+            '.gis-mod-acc-count{font-size:10.5px;padding:1px 7px;border-radius:999px;background:rgba(2,132,199,.18);color:#7dd3fc;border:1px solid rgba(2,132,199,.3);flex-shrink:0;}',
+            '.gis-mod-acc-chev{font-size:11px;color:var(--txt-dim,#94a3b8);transition:transform .28s ease;flex-shrink:0;}',
+            '.gis-mod-acc.open .gis-mod-acc-chev{transform:rotate(180deg);}',
+            '.gis-mod-acc-body{max-height:0;overflow:hidden;transition:max-height .32s ease;}',
+            '.gis-mod-acc.open .gis-mod-acc-body{max-height:2400px;}',
+            '.gis-mod-acc-body .gis-mod-grid{padding:8px;}',
+            '.gis-mod-acc-body .gis-mod-card{flex-direction:row;align-items:center;gap:10px;text-align:left;padding:9px;}',
+            '.gis-mod-acc-body .gis-mod-name{flex:1;min-width:0;display:flex;flex-direction:column;}',
+            '.gis-mod-acc-empty{padding:10px 12px;font-size:12px;color:var(--txt-dim,#94a3b8);}',
+
             '.gis-mod-panel{position:fixed;top:calc(var(--app-top,70px) + 12px);left:50%;transform:translateX(-50%);z-index:99998;width:min(520px,94vw);max-height:calc(var(--vh,100vh) - var(--app-top,70px) - 34px);display:none;flex-direction:column;background:var(--panel-bg,rgba(15,23,42,.94));backdrop-filter:blur(12px) saturate(150%);-webkit-backdrop-filter:blur(12px) saturate(150%);border:1px solid var(--card-brd,#334155);border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.5);color:var(--txt,#e2e8f0);overflow:hidden;}',
             '.gis-mod-panel.open{display:flex;}',
             '.gis-mod-panel-head{display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid var(--card-brd,#334155);background:linear-gradient(90deg,rgba(2,132,199,.20),transparent);}',
@@ -90,7 +152,7 @@
             '.gis-mod-panel-close{margin-inline-start:auto;width:30px;height:30px;border-radius:9px;border:1px solid var(--card-brd,#334155);background:rgba(255,255,255,.05);color:#cfe0ee;cursor:pointer;}',
             '.gis-mod-panel-close:hover{background:#ef4444;color:#fff;border-color:#ef4444;}',
             '.gis-mod-panel-body{padding:13px;overflow:auto;font-family:Tajawal,sans-serif;font-size:13px;line-height:1.7;}',
-            '.gis-mod-panel-body:empty::before{content:"لا يوجد محتوى.";color:var(--txt-dim,#94a3b8);}',
+            '.gis-mod-panel-body:empty::before{content:"No content.";color:var(--txt-dim,#94a3b8);}',
             '.gis-mod-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;background:rgba(2,132,199,.18);color:#7dd3fc;border:1px solid rgba(2,132,199,.35);}'
         ].join('');
         var s = el('style');
@@ -119,7 +181,7 @@
         var content = document.querySelector('.sidebar .content');
         if (!tabs || !content) { warn('لم يتم العثور على حاوية اللوحة الجانبية'); return; }
 
-        var btn = el('button', '', '<i class="fas fa-cubes"></i> وحدات');
+        var btn = el('button', '', '<i class="fas fa-cubes"></i> Tools');
         btn.setAttribute('data-tab', 'modules');
         btn.addEventListener('click', function () { switchTo('modules'); });
         tabs.appendChild(btn);
@@ -127,8 +189,8 @@
         var pane = el('div', 'tab-pane');
         pane.id = 'tab-modules';
         pane.innerHTML =
-            '<div class="tab-header"><h4><i class="fas fa-cubes"></i> وحدات GIS المتقدمة</h4></div>' +
-            '<div class="gis-mod-grid" id="gisModulesGrid"></div>';
+            '<div class="tab-header"><h4><i class="fas fa-cubes"></i> GIS Tools &amp; Modules</h4></div>' +
+            '<div class="gis-mod-acc-wrap" id="gisModulesGrid"></div>';
         content.appendChild(pane);
         GRID = pane.querySelector('#gisModulesGrid');
 
@@ -137,7 +199,7 @@
             var d = el('button');
             d.type = 'button';
             d.setAttribute('data-side', 'modules');
-            d.title = 'وحدات GIS';
+            d.title = 'GIS Tools';
             d.innerHTML = '<i class="fas fa-cubes"></i>';
             d.addEventListener('click', function () {
                 if (REFS && REFS.ui && typeof REFS.ui.setSidePanel === 'function') { REFS.ui.setSidePanel(true, 'modules'); }
@@ -154,7 +216,7 @@
         PANEL.innerHTML =
             '<div class="gis-mod-panel-head">' +
                 '<span class="gis-mod-panel-title" id="gisModPanelTitle"></span>' +
-                '<button type="button" class="gis-mod-panel-close" id="gisModPanelClose" title="إغلاق"><i class="fas fa-times"></i></button>' +
+                '<button type="button" class="gis-mod-panel-close" id="gisModPanelClose" title="Close"><i class="fas fa-times"></i></button>' +
             '</div>' +
             '<div class="gis-mod-panel-body" id="gisModPanelBody"></div>';
         document.body.appendChild(PANEL);
@@ -163,34 +225,81 @@
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePanel(); } });
     }
 
+    function sortGroups() {
+        if (!GRID) { return; }
+        var accs = Array.prototype.slice.call(GRID.querySelectorAll('.gis-mod-acc'));
+        accs.sort(function (a, b) { return (Number(a.dataset.order) || 0) - (Number(b.dataset.order) || 0); });
+        accs.forEach(function (a) { GRID.appendChild(a); });
+    }
+
+    function ensureGroup(groupTitle) {
+        var meta = groupMeta(groupTitle);
+        var groupKey = 'g-' + groupTitle.replace(/[^A-Za-z0-9]+/g, '_');
+        var acc = GRID.querySelector('.gis-mod-acc[data-group="' + groupKey + '"]');
+        if (acc) { return acc; }
+        acc = el('div', 'gis-mod-acc');
+        acc.setAttribute('data-group', groupKey);
+        acc.dataset.order = String(meta.order);
+        var head = el('button', 'gis-mod-acc-head');
+        head.type = 'button';
+        head.setAttribute('aria-expanded', 'false');
+        head.innerHTML =
+            '<span class="gis-mod-acc-ic"><i class="fas ' + meta.icon + '"></i></span>' +
+            '<span class="gis-mod-acc-label">' + escapeHtml(groupTitle) + '</span>' +
+            '<span class="gis-mod-acc-count">0</span>' +
+            '<i class="fas fa-chevron-down gis-mod-acc-chev"></i>';
+        var body = el('div', 'gis-mod-acc-body');
+        var inner = el('div', 'gis-mod-grid');
+        body.appendChild(inner);
+        acc.appendChild(head);
+        acc.appendChild(body);
+        head.addEventListener('click', function () {
+            var open = acc.classList.toggle('open');
+            head.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        GRID.appendChild(acc);
+        sortGroups();
+        return acc;
+    }
+
+    function refreshGroupCount(acc) {
+        var n = acc.querySelectorAll('.gis-mod-card').length;
+        var c = acc.querySelector('.gis-mod-acc-count');
+        if (c) { c.textContent = String(n); }
+    }
+
     function mountCard(def) {
         if (!GRID) { return; }
         if (GRID.querySelector('.gis-mod-card[data-mod="' + def.id + '"]')) { return; }
-        var groupTitle = def.group || 'أدوات عامة';
-        var groupKey = 'g-' + groupTitle.replace(/\s+/g, '_');
-        var group = GRID.querySelector('[data-group="' + groupKey + '"]');
-        if (!group) {
-            var gt = el('div', 'gis-mod-group-title', escapeHtml(groupTitle));
-            gt.setAttribute('data-group-head', groupKey);
-            GRID.appendChild(gt);
-            group = el('div', 'gis-mod-grid');
-            group.setAttribute('data-group', groupKey);
-            GRID.appendChild(group);
-        }
+        var acc = ensureGroup(def.group || 'Other Tools');
+        var inner = acc.querySelector('.gis-mod-grid');
         var available = typeof def.mount === 'function' || typeof def.open === 'function';
         var card = el('button', 'gis-mod-card' + (available ? '' : ' soon'));
         card.type = 'button';
         card.setAttribute('data-mod', def.id);
         card.innerHTML =
             '<span class="gis-mod-ico"><i class="fas ' + escapeHtml(def.icon || 'fa-puzzle-piece') + '"></i></span>' +
-            '<span class="gis-mod-name">' + escapeHtml(def.title || def.id) + '</span>' +
-            '<span class="gis-mod-desc">' + escapeHtml(def.description || '') + '</span>';
+            '<span class="gis-mod-name">' + escapeHtml(def.title || def.id) +
+                (def.description ? '<span class="gis-mod-desc">' + escapeHtml(def.description) + '</span>' : '') +
+            '</span>';
         if (available) {
             card.addEventListener('click', function () { openModule(def.id); });
         } else {
             card.disabled = true;
         }
-        group.appendChild(card);
+        inner.appendChild(card);
+        refreshGroupCount(acc);
+    }
+
+    function openDefaultGroup() {
+        if (!GRID) { return; }
+        if (GRID.querySelector('.gis-mod-acc.open')) { return; }
+        var accs = Array.prototype.slice.call(GRID.querySelectorAll('.gis-mod-acc'));
+        if (!accs.length) { return; }
+        accs.sort(function (a, b) { return (Number(a.dataset.order) || 0) - (Number(b.dataset.order) || 0); });
+        accs[0].classList.add('open');
+        var h = accs[0].querySelector('.gis-mod-acc-head');
+        if (h) { h.setAttribute('aria-expanded', 'true'); }
     }
 
     function openModule(id) {
@@ -244,6 +353,7 @@
         buildPanel();
         ensureToastHost();
         ORDER.forEach(function (id) { mountCard(MODULES[id]); });
+        openDefaultGroup();
         ORDER.forEach(function (id) {
             var m = MODULES[id];
             if (typeof m.init === 'function') { safe(function () { m.init(GIS.ctx); }, 'init:' + id); }
@@ -264,6 +374,7 @@
             if (!def || !def.id) { warn('registerModule: مطلوب حقل id', def); return null; }
             if (MODULES[def.id]) { warn('registerModule: معرّف مكرر', def.id); return MODULES[def.id]; }
             def.order = (typeof def.order === 'number') ? def.order : 100;
+            applyModuleMeta(def);
             MODULES[def.id] = def;
             ORDER.push(def.id);
             ORDER.sort(function (a, b) { return (MODULES[a].order - MODULES[b].order); });
