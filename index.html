@@ -805,6 +805,7 @@
             <button data-tab="draw"><i class="fas fa-pen"></i> Draw</button>
             <button data-tab="files"><i class="fas fa-folder-open"></i> Data</button>
             <button data-tab="tools"><i class="fas fa-toolbox"></i> Tools</button>
+            <button data-tab="cloud"><i class="fas fa-cloud"></i> Cloud</button>
             <button data-tab="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
             <button data-tab="settings"><i class="fas fa-cog"></i> Settings</button>
         </div>
@@ -892,6 +893,9 @@
                     <button class="draw-tool-btn" id="clearBtn" title="Clear all drawings"><i class="fas fa-eraser"></i> Clear</button>
                 </div>
             </div>
+
+            <!-- تبويب السحابة (Supabase) -->
+            <div class="tab-pane" id="tab-cloud"></div>
 
             <!-- تبويب الملفات والرفع -->
             <div class="tab-pane" id="tab-files">
@@ -6226,6 +6230,7 @@ const items = [
 <script src="js/gis-voronoi.js"></script>
 <script src="js/gis-timeline.js"></script>
 <script src="js/gis-labels.js"></script>
+<script src="js/gis-supabase.js"></script>
 
 <!-- ===== PWA: تسجيل Service Worker + زر التثبيت ===== -->
 <script>
