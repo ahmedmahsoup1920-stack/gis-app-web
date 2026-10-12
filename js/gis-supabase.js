@@ -51,6 +51,7 @@
         try { return new URL(u).origin; } catch (e) { return u.replace(/\/+$/, ''); }
     }
     function normKey(k) { return String(k || '').trim().replace(/\s+/g, ''); }
+    function validUrl(u) { return /^https:\/\/[a-z0-9][a-z0-9.-]*\.[a-z0-9-]{2,}$/i.test(String(u || '')); }
 
     function toast(msg, type) {
         if (typeof window.showToast === 'function') { try { window.showToast(msg, type || 'info'); return; } catch (e) {} }
@@ -86,6 +87,7 @@
 
     function getClient() {
         if (!configured()) return Promise.reject(new Error('لم تضبط إعدادات Supabase بعد'));
+        if (!validUrl(SB_URL)) return Promise.reject(new Error('رابط Supabase غير صالح: «' + SB_URL + '» — أعد إدخاله بالشكل https://xxxx.supabase.co'));
         return loadSDK().then(function () {
             if (!client) {
                 client = window.supabase.createClient(SB_URL, SB_KEY, {
@@ -242,7 +244,7 @@
     // ---------- UI ----------
     function render() {
         if (!root) return;
-        if (!configured()) { root.innerHTML = viewConfig(); wireConfig(); return; }
+        if (!configured() || !validUrl(SB_URL)) { root.innerHTML = viewConfig(); wireConfig(); return; }
         if (!user) { root.innerHTML = viewAuth(); wireAuth(); return; }
         root.innerHTML = viewAccount();
         wireAccount();
@@ -251,16 +253,21 @@
     }
 
     function viewConfig() {
+        var warn = (SB_URL && !validUrl(SB_URL))
+            ? '<div style="color:#f87171;font-size:11.5px;margin:4px 0">الإعدادات المحفوظة غير صالحة: «' + esc(SB_URL) + '» — أعد إدخال الرابط الصحيح.</div>'
+            : '';
         return '' +
             '<div class="tab-header"><h4><i class="fas fa-cloud"></i> Cloud (Supabase)</h4></div>' +
             '<div style="' + HINT + '">اربط مشروع Supabase الخاص بك: انسخ <b>Project URL</b> و<b>anon public key</b> من ' +
-            'Supabase &rarr; Project Settings &rarr; API، ثم اضغط حفظ. (مفتاح anon آمن للنشر لأنه محميّ بسياسات RLS.)</div>' +
+            'Supabase &rarr; Project Settings &rarr; API، ثم اضغط حفظ. رابط الـURL يجب أن يكون بالشكل <b>https://xxxx.supabase.co</b>.</div>' +
+            warn +
             '<div style="' + CARD + '">' +
             '<input data-f="url" type="text" placeholder="https://xxxx.supabase.co" value="' + esc(SB_URL) + '" style="' + INPUT + '">' +
             '<input data-f="key" type="text" placeholder="anon public key" value="' + esc(SB_KEY) + '" style="' + INPUT + '">' +
             '<button data-act="savecfg" style="' + BTN + '"><i class="fas fa-link"></i> حفظ الإعدادات</button>' +
             '<button data-act="testconn" style="' + BTN2 + 'width:100%;box-sizing:border-box;padding:9px;text-align:center"><i class="fas fa-plug-circle-check"></i> اختبار الاتصال</button>' +
-            '</div>';
+            '</div>' +
+            (configured() ? '<button data-act="reset" style="' + BTN2 + 'margin-top:10px;color:#f87171;border-color:#7f1d1d"><i class="fas fa-trash"></i> مسح الإعدادات</button>' : '');
     }
     function wireConfig() {
         root.querySelector('[data-act="savecfg"]').addEventListener('click', function () {
@@ -268,9 +275,7 @@
             var k = root.querySelector('[data-f="key"]').value;
             if (!u || !k) { toast('أدخل الرابط والمفتاح', 'error'); return; }
             var nu = normUrl(u);
-            if (!/^https:\/\/[^\s/]+\.supabase\.co$/i.test(nu)) {
-                if (!confirm('الرابط لا يشبه رابط Supabase المعتاد (https://xxxx.supabase.co).\nالمُدخل بعد التصحيح: ' + nu + '\n\nهل تريد المتابعة؟')) return;
-            }
+            if (!validUrl(nu)) { toast('رابط غير صالح: «' + nu + '» — لازم يكون https://xxxx.supabase.co', 'error'); return; }
             setConfig(nu, k);
             toast('تم حفظ إعدادات Supabase', 'success');
             render();
@@ -278,6 +283,13 @@
         var test = root.querySelector('[data-act="testconn"]');
         if (test) test.addEventListener('click', function () {
             testConnection(normUrl(root.querySelector('[data-f="url"]').value), normKey(root.querySelector('[data-f="key"]').value));
+        });
+        var reset = root.querySelector('[data-act="reset"]');
+        if (reset) reset.addEventListener('click', function () {
+            if (!confirm('مسح إعدادات الربط بمشروع Supabase؟')) return;
+            localStorage.removeItem(LS_URL); localStorage.removeItem(LS_KEY);
+            SB_URL = ''; SB_KEY = ''; client = null; user = null; projectsLoaded = false;
+            render();
         });
     }
 
