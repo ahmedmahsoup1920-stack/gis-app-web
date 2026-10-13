@@ -184,7 +184,8 @@
         var btn = el('button', '', '<i class="fas fa-cubes"></i> Tools');
         btn.setAttribute('data-tab', 'modules');
         btn.addEventListener('click', function () { switchTo('modules'); });
-        tabs.appendChild(btn);
+        var settingsBtn = tabs.querySelector('[data-tab="settings"]');
+        if (settingsBtn) { tabs.insertBefore(btn, settingsBtn); } else { tabs.appendChild(btn); }
 
         var pane = el('div', 'tab-pane');
         pane.id = 'tab-modules';
