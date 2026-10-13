@@ -774,18 +774,15 @@
 
 <div id="loginScreen">
     <div class="login-box">
-        <div class="login-icon"><i class="fas fa-lock"></i></div>
-        <h2>تسجيل الدخول</h2>
-        <div class="login-sub">نظام المعلومات الجغرافية - قطاع المياه</div>
-        <form id="loginForm">
-            <label>اسم المستخدم</label>
-            <input type="text" id="loginUser" placeholder="اسم المستخدم" autocomplete="username" />
-            <label>كلمة المرور</label>
-            <input type="password" id="loginPass" placeholder="كلمة المرور" autocomplete="current-password" />
-            <button type="submit" class="login-btn"><i class="fas fa-sign-in-alt"></i> دخول</button>
-            <div class="login-error" id="loginError"></div>
-        </form>
+        <div class="login-icon"><i class="fas fa-droplet"></i></div>
+        <h2>مرحبًا بك</h2>
+        <div class="login-sub">نظام المعلومات الجغرافية · قطاع المياه</div>
+        <button type="button" class="login-btn" id="guestEnterBtn"><i class="fas fa-user"></i> الدخول كزائر</button>
+        <button type="button" class="login-btn" id="cloudEnterBtn" style="margin-top:10px;background:linear-gradient(135deg,#0284c7,#0ea5e9)"><i class="fas fa-cloud"></i> تسجيل الدخول بحساب</button>
+        <div class="login-error" id="loginError"></div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:16px;line-height:1.7">الدخول كزائر يعمل بدون حساب.<br>تسجيل الدخول يتيح حفظ ومزامنة مشاريعك سحابيًا (Google · GitHub · البريد).</div>
     </div>
+</div>
 </div>
 
 <div id="appRoot">
@@ -992,8 +989,9 @@
 
                 <div class="set-sec">
                     <h5><i class="fas fa-database"></i> Data &amp; Storage</h5>
+                    <button type="button" class="set-btn" id="newProjectBtn" style="background:linear-gradient(135deg,#0284c7,#0ea5e9);color:#fff;border:none;margin-bottom:8px"><i class="fas fa-file-circle-plus"></i> مشروع جديد (مسح الكل)</button>
                     <button type="button" class="set-btn danger" id="clearCacheBtn"><i class="fas fa-trash-can"></i> Clear Cache</button>
-                    <div class="set-note">Clears saved session data and temporary files (Service Worker), then reloads the app.</div>
+                    <div class="set-note">«مشروع جديد» يمسح كل البيانات الحالية (المواقع، الملفات، الرسومات) ويبدأ من الصفر. «Clear Cache» يمسح البيانات المؤقتة والكاش ويعيد التحميل.</div>
                 </div>
             </div>
         </div>
@@ -4628,9 +4626,19 @@
                 saveAppSettings();
             });
         }
+        const newBtn = document.getElementById('newProjectBtn');
+        if (newBtn) newBtn.addEventListener('click', async function () {
+            if (!confirm('بدء مشروع جديد؟ سيتم مسح كل البيانات الحالية (المواقع والملفات والرسومات) نهائيًا. متابعة؟')) return;
+            try { await idbDel(IDB_DATA_KEY); } catch (_) {}
+            try { await idbDel(FILE_HANDLE_KEY); } catch (_) {}
+            try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+            location.reload();
+        });
         const clearBtn = document.getElementById('clearCacheBtn');
         if (clearBtn) clearBtn.addEventListener('click', async function () {
             if (!confirm('سيتم مسح البيانات المحفوظة والملفات المؤقتة وإعادة تحميل التطبيق. متابعة؟')) return;
+            try { await idbDel(IDB_DATA_KEY); } catch (_) {}
+            try { await idbDel(FILE_HANDLE_KEY); } catch (_) {}
             try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(SETTINGS_KEY); } catch (_) {}
             try {
                 if (window.caches) {
@@ -5243,12 +5251,26 @@
         };
     }
 
-    // ===== حفظ تلقائي محلي (localStorage) مع تجميع الطلبات =====
+    // ===== حفظ تلقائي محلي (IndexedDB أولاً — يتجاوز حد 5MB في localStorage) =====
+    const IDB_DATA_KEY = 'waterGisAppData';
     var __autosaveTimer = null;
+    function persistAppData() {
+        var payload;
+        try { payload = buildSavePayload(); } catch (e) { return; }
+        try {
+            idbSet(IDB_DATA_KEY, payload).catch(function () {
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch (e2) {}
+            });
+        } catch (e) {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch (e2) {}
+        }
+    }
     function scheduleAutosave() {
         clearTimeout(__autosaveTimer);
         __autosaveTimer = setTimeout(function () {
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(buildSavePayload())); } catch (e) { console.error('فشل الحفظ التلقائي', e); }
+            persistAppData();
+            // مزامنة سحابية تلقائية (إن كان المستخدم مسجّلًا ومزامنة السحابة مفعّلة)
+            try { if (window.GIS && window.GIS.cloud && typeof window.GIS.cloud.autoSync === 'function') window.GIS.cloud.autoSync(); } catch (e) {}
         }, 400);
     }
     window.__gisScheduleAutosave = scheduleAutosave;
@@ -5363,6 +5385,17 @@
         } catch(e) { console.error('فشل الاسترجاع التلقائي', e); return false; }
     }
 
+    async function loadFromIndexedDB() {
+        let payload = null;
+        try { payload = await idbGet(IDB_DATA_KEY); } catch (e) { payload = null; }
+        if (!payload || typeof payload !== 'object') return false;
+        try {
+            applyPayload(payload);
+            showSaveStatus('📂 تم استرجاع آخر نسخة محلية');
+            return true;
+        } catch (e) { console.error('فشل استرجاع IndexedDB', e); return false; }
+    }
+
     function loadFromLocalStorage() {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return false;
@@ -5470,7 +5503,8 @@
     (async function initRestore() {
         // استرجاع آخر نسخة محفوظة محلياً إن وُجدت، وإلا تبدأ الخريطة فارغة (بدون بيانات تجريبية)
         let restored = false;
-        try { restored = loadFromLocalStorage(); } catch (e) { console.error('خطأ في الاسترجاع المحلي', e); }
+        try { restored = await loadFromIndexedDB(); } catch (e) { console.error('خطأ في الاسترجاع من IndexedDB', e); }
+        if (!restored) { try { restored = loadFromLocalStorage(); } catch (e) { console.error('خطأ في الاسترجاع المحلي', e); } }
         if (!restored) {
             try { restored = await autoRestoreFromFile(); } catch (e) { console.error('خطأ في الاسترجاع من الملف', e); }
         }
@@ -5496,36 +5530,35 @@
     console.log('✏️ العناصر المرسومة:', customFeaturesData.length);
 
     // ================================================================
-    //  تسجيل الدخول
+    //  الدخول الموحّد: زائر أو حساب Supabase
     // ================================================================
-    const VALID_USER = 'ahmed';
-    const VALID_PASS = 'ahmed';
+    function enterApp(tab) {
+        // الخريطة تُهيَّأ أثناء إخفاء الحاوية، لذا نعيد حساب أبعادها بعد الظهور بشكل متكرر
+        // (بما في ذلك بعد تحميل الخطوط) حتى لا تنزاح الطبقات/الرسومات عن أماكنها مع حركة الماوس
+        const refitMap = () => { if (typeof map !== 'undefined' && map) { try { map.invalidateSize({ pan: false }); } catch (_) {} } };
+        try { localStorage.setItem('gisEntered', '1'); } catch (_) {}
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appRoot').style.display = 'flex';
+        setTimeout(refitMap, 60);
+        setTimeout(refitMap, 400);
+        setTimeout(refitMap, 1200);
+        setTimeout(refitMap, 3000);
+        window.addEventListener('load', refitMap);
+        window.addEventListener('resize', refitMap);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(refitMap);
+        if (tab) { try { if (typeof switchTab === 'function') switchTab(tab); } catch (_) {} }
+    }
+    window.enterApp = enterApp;
+    window.leaveApp = function () { try { localStorage.removeItem('gisEntered'); } catch (_) {} location.reload(); };
 
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const user = document.getElementById('loginUser').value.trim();
-        const pass = document.getElementById('loginPass').value;
-        const errorEl = document.getElementById('loginError');
+    const guestBtn = document.getElementById('guestEnterBtn');
+    if (guestBtn) guestBtn.addEventListener('click', function () { enterApp(); });
+    const cloudEnterBtn = document.getElementById('cloudEnterBtn');
+    if (cloudEnterBtn) cloudEnterBtn.addEventListener('click', function () { enterApp('cloud'); });
 
-        if (user === VALID_USER && pass === VALID_PASS) {
-            errorEl.textContent = '';
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('appRoot').style.display = 'flex';
-            // الخريطة تُهيَّأ أثناء إخفاء الحاوية، لذا نعيد حساب أبعادها بعد الظهور بشكل متكرر
-            // (بما في ذلك بعد تحميل الخطوط) حتى لا تنزاح الطبقات/الرسومات عن أماكنها مع حركة الماوس
-            const refitMap = () => { if (typeof map !== 'undefined' && map) { try { map.invalidateSize({ pan: false }); } catch (_) {} } };
-            setTimeout(refitMap, 60);
-            setTimeout(refitMap, 400);
-            setTimeout(refitMap, 1200);
-            setTimeout(refitMap, 3000);
-            window.addEventListener('load', refitMap);
-            window.addEventListener('resize', refitMap);
-            if (document.fonts && document.fonts.ready) document.fonts.ready.then(refitMap);
-        } else {
-            errorEl.textContent = '❌ اسم المستخدم أو كلمة المرور غير صحيحة';
-            document.getElementById('loginPass').value = '';
-        }
-    });
+    // دخول تلقائي إن سبق الدخول في هذه الجلسة
+    try { if (localStorage.getItem('gisEntered') === '1') enterApp(); } catch (_) {}
+
 
     // ================================================================
     //  الوحدة المستقلة: لوحة الطبقات المتقدمة (Advanced TOC)
