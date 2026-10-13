@@ -1286,8 +1286,15 @@
             layer: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, maxNativeZoom: 19, subdomains: 'abcd', attribution: '© OpenStreetMap, © CARTO' }),
             icon: 'fa-moon',
             color: '#475569'
+        },
+        'Sentinel-2 Cloudless (مفتوح)': {
+            layer: L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg', { maxZoom: 20, maxNativeZoom: 14, attribution: '© EOX · Sentinel-2 cloudless (CC BY-NC-SA)' }),
+            icon: 'fa-satellite-dish',
+            color: '#10b981'
         }
     };
+    // إتاحة خرائط الأساس لوحدات GIS المستقلة (مثل وحدة تصدير الصور الجوية)
+    window.__gisBaseMaps = baseMaps;
 
     let activeMap = 'Google Satellite (أوضح)';
     let currentLayer = baseMaps[activeMap].layer;
@@ -6109,6 +6116,7 @@ const items = [
 <script src="js/gis-timeline.js"></script>
 <script src="js/gis-labels.js"></script>
 <script src="js/gis-supabase.js"></script>
+<script src="js/gis-imagery.js"></script>
 
 <!-- ===== PWA: تسجيل Service Worker + زر التثبيت ===== -->
 <script>
