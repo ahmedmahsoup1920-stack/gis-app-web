@@ -57,6 +57,7 @@
         'elevation':    { title: 'Elevation Profile',       group: 'Spatial Analysis',     description: 'Draw an elevation profile for a line/polygon using DEM data.' },
         'extrude':      { title: '3D Extrusion',            group: 'Visualization',        description: 'Extrude polygons into 3D solids using a numeric height field.' },
         'print':        { title: 'Print Layout',            group: 'Export & Workspace',   description: 'Compose a print layout (title/legend/scale/north arrow) and export to PDF.' },
+        'imagery':      { title: 'Aerial Imagery Export',   group: 'Export & Workspace',   description: 'Export a georeferenced high-res aerial/satellite image (PNG + GeoTIFF) for any drawn area from open sources.' },
         'geoprocessing':{ title: 'Geoprocessing',           group: 'Spatial Analysis',     description: 'Clip, intersect, union, and dissolve between two polygon layers.' },
         'network':      { title: 'Network Analysis',        group: 'Spatial Analysis',     description: 'Trace a connected network from a line feature and find the nearest neighbour.' },
         'commands':     { title: 'Command Palette',         group: 'Export & Workspace',   description: 'Quick search to open any module, plus a short usage guide.' },
