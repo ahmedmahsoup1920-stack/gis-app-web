@@ -108,6 +108,11 @@
                         user = (session && session.user) ? session.user : null;
                         projectsLoaded = false;
                         render();
+                        if (user && typeof window.enterApp === 'function') {
+                            var entered = false;
+                            try { entered = localStorage.getItem('gisEntered') === '1'; } catch (e) {}
+                            if (!entered) { try { window.enterApp('cloud'); } catch (e) {} }
+                        }
                     });
                 } catch (e) {}
             }
@@ -513,6 +518,7 @@
         signIn: signIn,
         signUp: signUp,
         signOut: signOut,
+        signInWithOAuth: signInWithOAuth,
         saveProject: saveProject,
         loadProject: loadProject,
         deleteProject: deleteProject,
@@ -523,4 +529,21 @@
         getUser: function () { return user; },
         render: render
     };
+
+    // ---------- معالجة العودة من OAuth (Google/GitHub) وتسجيل الدخول المحفوظ ----------
+    function bootstrapSession() {
+        if (!configured()) return;
+        var url = String(location.href || '');
+        var hasCallback = /[#?&](code|access_token|error|error_description)=/.test(url);
+        var hasPersisted = false;
+        try {
+            for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                if (k && /^sb-.*-auth-token/.test(k)) { hasPersisted = true; break; }
+            }
+        } catch (e) {}
+        if (!hasCallback && !hasPersisted) return;
+        getClient().then(function (c) { return c.auth.getSession(); }).catch(function () {});
+    }
+    try { bootstrapSession(); } catch (e) {}
 })();
