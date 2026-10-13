@@ -217,6 +217,8 @@
         .attr-cap { font-size:11px; color:#8a9aa8; font-weight:400; }
         .attr-row-del { background:#fdecec; color:#c0392b; border:none; border-radius:6px; width:26px; height:26px; cursor:pointer; font-size:12px; }
         .attr-row-del:hover { background:#f8d7d7; }
+        .attr-col-del { background:transparent; color:#c0392b; border:none; cursor:pointer; font-size:10px; padding:1px 2px; border-radius:4px; opacity:.65; vertical-align:middle; }
+        .attr-col-del:hover { opacity:1; background:#fdecec; }
         .map-point-num { background:#0e8f8a; color:#fff; border:2px solid #fff; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; box-shadow:0 2px 6px rgba(0,0,0,0.35); font-family:inherit; }
         .coord-crosshair, .coord-crosshair #map { cursor:crosshair; }
         .measure-tooltip { background:#e8973a!important; color:white!important; border:none!important; font-weight:700; font-size:11px; box-shadow:0 2px 8px rgba(0,0,0,0.25); }
@@ -821,10 +823,10 @@
         <div class="tabs">
             <button class="active" data-tab="locations"><i class="fas fa-map-pin"></i> Locations</button>
             <button data-tab="draw"><i class="fas fa-pen"></i> Draw</button>
-            <button data-tab="files"><i class="fas fa-folder-open"></i> Data</button>
             <button data-tab="tools"><i class="fas fa-toolbox"></i> Tools</button>
-            <button data-tab="cloud"><i class="fas fa-cloud"></i> Cloud</button>
+            <button data-tab="files"><i class="fas fa-folder-open"></i> Data</button>
             <button data-tab="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
+            <button data-tab="cloud"><i class="fas fa-cloud"></i> Cloud</button>
             <button data-tab="settings"><i class="fas fa-cog"></i> Settings</button>
         </div>
 
@@ -900,7 +902,7 @@
                     <button class="save-btn" id="exportLayerBtn" title="Export visible layers (or current selection)"><i class="fas fa-file-export"></i> <span class="btn-text">تصدير</span></button>
                     <button class="export-btn" id="exportOptionsBtn" title="Advanced export options"><i class="fas fa-sliders"></i> Options</button>
                 </div>
-                <div class="coord-hint">Exports every visible layer (or the current selection). Options let you pick a specific source (stations, lines, reservoirs, drawings&nbsp;…).</div>
+                <div class="coord-hint">Exports every visible layer (or the current selection). Options let you pick a specific source.</div>
 
                 <div class="tab-header">
                     <h4><i class="fas fa-cube"></i> View &amp; Map</h4>
@@ -1121,7 +1123,6 @@
         <select id="expSource">
             <option value="visible">كل الطبقات الظاهرة على الخريطة</option>
             <option value="all">كل الطبقات (بما فيها المخفية)</option>
-            <option value="water">شبكة المياه (محطات الضخ · خطوط النقل · الخزانات)</option>
             <option value="drawn">المعالم المرسومة</option>
             <option value="files">الملفات المرفوعة</option>
             <option value="locations">المواقع المحفوظة</option>
@@ -1322,102 +1323,6 @@
         raiseVectorLayers();
         // مزامنة لوحة الطبقات المتقدمة مع تغيير الخريطة الأساسية
         try { if (window.AdvancedTOC) window.AdvancedTOC.render(); } catch (e) {}
-    }
-
-    // ================================================================
-    //  شبكة المياه: محطات الضخ · خطوط النقل الرئيسية · الخزانات الاستراتيجية
-    //  (طبقات نموذجية قابلة للإظهار/الإخفاء من لوحة الطبقات TOC)
-    // ================================================================
-    const waterLayers = {};
-    (function initWaterNetwork() {
-        function popupHtml(p) {
-            p = p || {};
-            let s = '<div style="font-family:inherit;min-width:160px">' +
-                '<div style="font-weight:800;color:#0a2a44;margin-bottom:6px"><i class="fas fa-droplet" style="color:#0e8f8a"></i> ' + escapeHtml(p.name || '') + '</div>';
-            Object.keys(p).forEach(function (k) {
-                if (k === 'name') return;
-                s += '<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0;border-top:1px solid #eef3f7">' +
-                    '<span style="color:#8a9aa8">' + escapeHtml(k) + '</span><b style="color:#1a5a8a">' + escapeHtml(p[k]) + '</b></div>';
-            });
-            return s + '</div>';
-        }
-
-        const DEF = {
-            'water:stations': {
-                label: 'محطات الضخ', sub: 'Pumping Stations', gtype: 'point', color: '#e63946', pane: 'gisPointPane',
-                data: { type: 'FeatureCollection', features: [
-                    { type: 'Feature', properties: { name: 'محطة ضخ الشمال', type: 'Pumping Station', capacity: '4500 m³/day', status: 'Operational' }, geometry: { type: 'Point', coordinates: [39.176, 21.552] } },
-                    { type: 'Feature', properties: { name: 'محطة ضخ الجنوب', type: 'Pumping Station', capacity: '6200 m³/day', status: 'Operational' }, geometry: { type: 'Point', coordinates: [39.168, 21.524] } },
-                    { type: 'Feature', properties: { name: 'محطة ضخ الشرق', type: 'Pumping Station', capacity: '3100 m³/day', status: 'Maintenance' }, geometry: { type: 'Point', coordinates: [39.195, 21.538] } },
-                    { type: 'Feature', properties: { name: 'محطة ضخ الغرب', type: 'Pumping Station', capacity: '5200 m³/day', status: 'Operational' }, geometry: { type: 'Point', coordinates: [39.148, 21.545] } }
-                ] },
-                style: function () { return { radius: 7, color: '#ffffff', weight: 2, fillColor: '#e63946', fillOpacity: 1 }; }
-            },
-            'water:lines': {
-                label: 'خطوط النقل الرئيسية', sub: 'Transmission Lines', gtype: 'line', color: '#1a5a8a', pane: 'gisLinePane',
-                data: { type: 'FeatureCollection', features: [
-                    { type: 'Feature', properties: { name: 'نقل رئيسي 1', diameter: '800 mm', length: '6.4 km' }, geometry: { type: 'LineString', coordinates: [[39.148, 21.545], [39.168, 21.524], [39.195, 21.538]] } },
-                    { type: 'Feature', properties: { name: 'نقل رئيسي 2', diameter: '600 mm', length: '4.1 km' }, geometry: { type: 'LineString', coordinates: [[39.176, 21.552], [39.195, 21.538]] } },
-                    { type: 'Feature', properties: { name: 'نقل فرعي A', diameter: '400 mm', length: '2.8 km' }, geometry: { type: 'LineString', coordinates: [[39.176, 21.552], [39.168, 21.560], [39.148, 21.545]] } }
-                ] },
-                style: function () { return { color: '#1a5a8a', weight: 4, opacity: 0.9 }; }
-            },
-            'water:reservoirs': {
-                label: 'الخزانات الاستراتيجية', sub: 'Strategic Reservoirs', gtype: 'polygon', color: '#0e8f8a', pane: 'gisPolyPane',
-                data: { type: 'FeatureCollection', features: [
-                    { type: 'Feature', properties: { name: 'خزان استراتيجي 1', capacity: '50000 m³', type: 'Reservoir' }, geometry: { type: 'Polygon', coordinates: [[[39.172, 21.556], [39.180, 21.556], [39.180, 21.562], [39.172, 21.562], [39.172, 21.556]]] } },
-                    { type: 'Feature', properties: { name: 'خزان استراتيجي 2', capacity: '35000 m³', type: 'Reservoir' }, geometry: { type: 'Polygon', coordinates: [[[39.155, 21.518], [39.163, 21.518], [39.163, 21.524], [39.155, 21.524], [39.155, 21.518]]] } }
-                ] },
-                style: function () { return { color: '#0e8f8a', weight: 2, fillColor: '#0e8f8a', fillOpacity: 0.35 }; }
-            }
-        };
-
-        Object.keys(DEF).forEach(function (key) {
-            const d = DEF[key];
-            const layer = L.geoJSON(d.data, {
-                pane: d.pane,
-                style: d.style,
-                pointToLayer: (d.gtype === 'point') ? function (f, ll) { return L.circleMarker(ll, d.style()); } : null
-            });
-            layer.eachLayer(function (ly) {
-                const p = (ly.feature && ly.feature.properties) || {};
-                try { ly.bindPopup(popupHtml(p), { maxWidth: 300, className: 'gis-popup' }); } catch (e) {}
-                try { ly.bindTooltip(p.name || '', { direction: 'top', className: 'measure-tooltip' }); } catch (e) {}
-            });
-            d.layer = layer;
-            d.opacity = 1;
-            waterLayers[key] = d;
-            try { layer.addTo(map); } catch (e) {}
-        });
-    })();
-
-    function setWaterVisibility(key, on) {
-        const w = waterLayers[key];
-        if (!w || !w.layer) return;
-        if (on) { if (!map.hasLayer(w.layer)) w.layer.addTo(map); }
-        else { if (map.hasLayer(w.layer)) map.removeLayer(w.layer); }
-        try { if (on && w.gtype !== 'point' && w.layer.bringToFront) w.layer.bringToFront(); } catch (e) {}
-    }
-
-    function setWaterOpacity(w, val) {
-        if (!w || !w.layer) return;
-        try {
-            w.layer.setStyle(function () {
-                const s = w.style ? w.style() : {};
-                s.opacity = val;
-                if (s.fillOpacity != null) s.fillOpacity = s.fillOpacity * val;
-                return s;
-            });
-        } catch (e) {}
-    }
-
-    function zoomToWater(key) {
-        const w = waterLayers[key];
-        if (!w || !w.layer) return;
-        try {
-            const b = w.layer.getBounds();
-            if (b && b.isValid()) map.fitBounds(b, { padding: [40, 40], maxZoom: 16 });
-        } catch (e) {}
     }
 
     // ================================================================
@@ -1880,6 +1785,7 @@
         if (!container) return;
         if (customFeaturesData.length === 0) {
             container.innerHTML = `<div class="empty-state"><div class="big-icon"><i class="fas fa-shapes"></i></div><h4>No User Drawings</h4><p>Use the buttons above to add a point, line, polygon or text on the map.</p></div>`;
+            if (typeof scheduleAutosave === 'function') scheduleAutosave();
             return;
         }
         const iconMap = { 'نقطة':'fa-map-marker-alt', 'خط':'fa-slash', 'مضلع':'fa-draw-polygon', 'نص':'fa-font' };
@@ -1918,6 +1824,7 @@
                 }
             });
         });
+        if (typeof scheduleAutosave === 'function') scheduleAutosave();
     }
 
     document.getElementById('drawPointBtn').addEventListener('click', () => startCustomDraw('point'));
@@ -2394,7 +2301,15 @@
     const KIND_TO_AR = { point: 'نقطة', line: 'خط', polygon: 'مضلع' };
 
     // ===== مخطط الأعمدة المضافة (Add Column) =====
-    let customColumns = [];
+    // حقول شبكة المياه الافتراضية: النوع · القطر · الحالة · الملاحظات
+    const WATER_DEFAULT_COLUMNS = [
+        { name: 'النوع', type: 'select', options: ['أنبوب رئيسي', 'أنبوب فرعي', 'محبس', 'حنفية حريق', 'خزان', 'مضخة', 'عداد', 'منهل'], def: '' },
+        { name: 'القطر (مم)', type: 'number', options: [], def: '' },
+        { name: 'الحالة', type: 'select', options: ['جديد', 'جيد', 'يحتاج صيانة', 'خارج الخدمة'], def: '' },
+        { name: 'الملاحظات', type: 'text', options: [], def: '' }
+    ];
+    function defaultWaterColumns() { return WATER_DEFAULT_COLUMNS.map(function (c) { return { name: c.name, type: c.type, options: (c.options || []).slice(), def: c.def }; }); }
+    let customColumns = defaultWaterColumns();
     let fileColumns = {};
     let attrFieldFilter = { field: '', value: '' };
 
@@ -2666,7 +2581,12 @@
 
         const editable = attrSource.type === 'custom';
         const canEditCols = attrSource.type === 'custom' || attrSource.type === 'file';
-        const dynHead = cols.map(function (c) { return `<th>${escapeHtml(c.name)}</th>`; }).join('');
+        const dynHead = cols.map(function (c) {
+            const del = canEditCols
+                ? ` <button class="attr-col-del" data-col="${escapeHtml(c.name)}" title="Delete column"><i class="fas fa-times"></i></button>`
+                : '';
+            return `<th>${escapeHtml(c.name)}${del}</th>`;
+        }).join('');
         const head = `<tr><th>#</th><th>Type</th><th>Name</th><th>Description</th><th>UTM Zone</th><th>Easting (E)</th><th>Northing (N)</th><th>Length (m)</th><th>Area (m²)</th>${dynHead}${editable ? '<th>Actions</th>' : ''}</tr>`;
         let body = '';
         list.forEach((r, i) => {
@@ -2745,6 +2665,12 @@
                 }
             });
         });
+        wrap.querySelectorAll('.attr-col-del').forEach(btn => {
+            btn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                removeAttrColumn(this.dataset.col);
+            });
+        });
         wrap.querySelectorAll('tbody tr').forEach(tr => {
             function markSelected() {
                 const idx = parseInt(tr.dataset.row);
@@ -2821,6 +2747,7 @@
             if (cf) { refreshCustomLayerGeometry(cf); }
         }
         showSaveStatus('✓ تم تحديث العمود «' + colName + '»');
+        if (typeof scheduleAutosave === 'function') scheduleAutosave();
     }
 
     function updateAddColTypeUI() {
@@ -2877,6 +2804,27 @@
         const s = document.getElementById('dtSearch');
         renderAttrTable(s ? s.value : '');
         showSaveStatus('✓ Column «' + name + '» added');
+        if (typeof scheduleAutosave === 'function') scheduleAutosave();
+    }
+
+    function removeAttrColumn(name) {
+        if (!name || attrSource.type === 'location') return;
+        const col = activeAttrColumns().find(function (c) { return c.name === name; });
+        if (!col) return;
+        if (!confirm('حذف العمود «' + name + '» وكل قيمه؟')) return;
+        if (attrSource.type === 'file') {
+            fileColumns[attrSource.id] = (fileColumns[attrSource.id] || []).filter(function (c) { return c.name !== name; });
+        } else {
+            customColumns = customColumns.filter(function (c) { return c.name !== name; });
+        }
+        attrSourceFeatures().forEach(function (f) { if (f && f.properties) { delete f.properties[name]; } });
+        if (attrSource.type === 'custom') customFeaturesData.forEach(function (cf) { bindCustomPopup(cf); });
+        if (attrFieldFilter.field === name) attrFieldFilter = { field: '', value: '' };
+        refreshFieldFilterOptions();
+        const s = document.getElementById('dtSearch');
+        renderAttrTable(s ? s.value : '');
+        showSaveStatus('✓ تم حذف العمود «' + name + '»');
+        if (typeof scheduleAutosave === 'function') scheduleAutosave();
     }
 
     function buildFeatureRows() {
@@ -3614,6 +3562,7 @@
             });
         });
         updateLocationMarkers();
+        try { if (typeof scheduleAutosave === 'function') scheduleAutosave(); } catch (e) {}
     }
 
     // نافذة إضافة/تعديل موقع
@@ -3929,6 +3878,7 @@
 
         if (filtered.length === 0) {
             container.innerHTML = `<div class="empty-state"><div class="big-icon"><i class="fas fa-cloud-upload-alt"></i></div><h4>لا توجد ملفات</h4><p>ارفع ملفاً لعرضه على الخريطة</p></div>`;
+            if (typeof scheduleAutosave === 'function') scheduleAutosave();
             return;
         }
 
@@ -3978,9 +3928,10 @@
         container.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                window.deleteUploadedFile(parseInt(this.dataset.id));
+                window.deleteFile(parseInt(this.dataset.id));
             });
         });
+        if (typeof scheduleAutosave === 'function') scheduleAutosave();
     }
 
     const __fileSearchEl = document.getElementById('fileSearch');
@@ -4901,17 +4852,10 @@
         }
 
         const onlyVisible = (source === 'visible');
-        const wantWater = (source === 'all' || source === 'visible' || source === 'water');
         const wantDrawn = (source === 'all' || source === 'visible' || source === 'drawn');
         const wantFiles = (source === 'all' || source === 'visible' || source === 'files');
         const wantLocs  = (source === 'all' || source === 'visible' || source === 'locations');
 
-        if (wantWater) {
-            Object.keys(waterLayers).forEach(k => {
-                if (onlyVisible && !map.hasLayer(waterLayers[k].layer)) return;
-                pushFC(waterLayers[k].data);
-            });
-        }
         if (wantDrawn) {
             (customFeaturesData || []).forEach(cf => {
                 if (!cf.geojson || !cf.geojson.geometry) return;
@@ -5293,9 +5237,21 @@
             measureIdCounter: measureIdCounter,
             customFeatures: customFeaturesData.map(cf => ({ id: cf.id, kind: cf.kind, name: cf.name, desc: cf.desc, geojson: cf.geojson, color: cf.color, weight: cf.weight, opacity: cf.opacity })),
             customIdCounter: customIdCounter,
-            layerStyles: layerStyles
+            layerStyles: layerStyles,
+            customColumns: customColumns,
+            fileColumns: fileColumns
         };
     }
+
+    // ===== حفظ تلقائي محلي (localStorage) مع تجميع الطلبات =====
+    var __autosaveTimer = null;
+    function scheduleAutosave() {
+        clearTimeout(__autosaveTimer);
+        __autosaveTimer = setTimeout(function () {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(buildSavePayload())); } catch (e) { console.error('فشل الحفظ التلقائي', e); }
+        }, 400);
+    }
+    window.__gisScheduleAutosave = scheduleAutosave;
 
     // ===== الحفظ على الجهاز (ملف حقيقي بدل ذاكرة المتصفح) =====
     const FILE_HANDLE_KEY = 'waterGisFileHandle_v1';
@@ -5420,6 +5376,8 @@
     }
 
     function applyPayload(payload) {
+        if (Array.isArray(payload.customColumns)) customColumns = payload.customColumns;
+        if (payload.fileColumns && typeof payload.fileColumns === 'object') fileColumns = payload.fileColumns;
         if (Array.isArray(payload.locations)) {
             locations = payload.locations.map(l => ({...l, color:l.color || '#e63946'}));
             locIdCounter = Math.max(Number(payload.locIdCounter)||1, 0, ...locations.map(l => Number(l.id)||0)) + 1;
@@ -5510,19 +5468,25 @@
     //  تهيئة التطبيق: يبدأ دائماً ببيانات فارغة (بدون أي بيانات تجريبية)
     // ================================================================
     (async function initRestore() {
-        // مسح أي بيانات محفوظة/تجريبية سابقة ولوحة القياس والرسومات والمواقع
-        if (geoLayer) { map.removeLayer(geoLayer); geoLayer = null; }
-        currentData = null; currentFileName = '';
-        layerStyles = {};
-        uploadedFiles = [];
-        customItems.clearLayers(); customFeaturesData = [];
-        measureItems.clearLayers(); measurements = [];
-        locations = [];
-        renderLocations();
-
-        renderFiles();
-        renderCustomFeatures();
-        updateTOC();
+        // استرجاع آخر نسخة محفوظة محلياً إن وُجدت، وإلا تبدأ الخريطة فارغة (بدون بيانات تجريبية)
+        let restored = false;
+        try { restored = loadFromLocalStorage(); } catch (e) { console.error('خطأ في الاسترجاع المحلي', e); }
+        if (!restored) {
+            try { restored = await autoRestoreFromFile(); } catch (e) { console.error('خطأ في الاسترجاع من الملف', e); }
+        }
+        if (!restored) {
+            if (geoLayer) { map.removeLayer(geoLayer); geoLayer = null; }
+            currentData = null; currentFileName = '';
+            layerStyles = {};
+            uploadedFiles = [];
+            customItems.clearLayers(); customFeaturesData = [];
+            measureItems.clearLayers(); measurements = [];
+            locations = [];
+            renderLocations();
+            renderFiles();
+            renderCustomFeatures();
+            updateTOC();
+        }
         document.getElementById('loader').style.display = 'none';
     })();
 
@@ -5664,20 +5628,6 @@
                 });
             });
 
-            // 1b) شبكة المياه (محطات الضخ / خطوط النقل / الخزانات)
-            let waterRows = '', waterCount = 0;
-            Object.keys(waterLayers).forEach((key) => {
-                const w = waterLayers[key];
-                if (q && nrm(w.label).indexOf(q) < 0 && nrm(w.sub || '').indexOf(q) < 0) return;
-                waterCount++; total++;
-                waterRows += rowHTML({
-                    kind: 'water', key: key, id: key, gtype: w.gtype,
-                    name: w.label, sub: w.sub || '',
-                    color: w.color, dot: (w.gtype === 'point'),
-                    checked: map.hasLayer(w.layer), opacity: (w.opacity == null ? 1 : w.opacity)
-                });
-            });
-
             // 2) العناصر المرسومة (بترتيب السحب والإفلات)
             let drawRows = '', drawCount = 0;
             const drawKeys = orderCandidates('draw', customFeaturesData.map((c) => String(c.id)));
@@ -5730,7 +5680,6 @@
 
             let html = '';
             html += groupHTML('basemaps', 'خرائط الأساس', 'fa-map', baseRows, baseCount);
-            html += groupHTML('water', 'شبكة المياه', 'fa-water', waterRows, waterCount);
             html += groupHTML('draw', 'العناصر المرسومة', 'fa-pen-ruler', drawRows, drawCount);
             html += groupHTML('spatial', 'المعالم المكانية', 'fa-location-dot', spatialRows, spatialCount);
             if (!total) {
@@ -5758,8 +5707,6 @@
                 toggleCustomVisibility(Number(info.id), on);
             } else if (info.kind === 'location' && typeof toggleLocationVisibility === 'function') {
                 toggleLocationVisibility(Number(info.id), on);
-            } else if (info.kind === 'water') {
-                setWaterVisibility(info.key, on);
             }
         }
 
@@ -5783,9 +5730,6 @@
             } else if (info.kind === 'location') {
                 const loc = locationById(info.id); if (!loc) return;
                 loc.opacity = val; updateLocationMarkers();
-            } else if (info.kind === 'water') {
-                const w = waterLayers[info.key]; if (!w) return;
-                w.opacity = val; setWaterOpacity(w, val);
             }
         }
 
@@ -5840,7 +5784,6 @@
             else if (info.kind === 'file') zoomToItem('file', Number(info.id), info.gtype);
             else if (info.kind === 'custom') zoomToItem('custom', Number(info.id));
             else if (info.kind === 'location') zoomToItem('location', Number(info.id));
-            else if (info.kind === 'water') zoomToWater(info.key);
         }
         function layerGeoJSON(info) {
             if (info.kind === 'file') {
@@ -5858,10 +5801,6 @@
                 const loc = locationById(info.id);
                 if (!loc) return null;
                 return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { name: loc.name, description: loc.desc || '' }, geometry: { type: 'Point', coordinates: [loc.lng, loc.lat] } }] };
-            }
-            if (info.kind === 'water') {
-                const w = waterLayers[info.key];
-                return (w && w.data) ? w.data : null;
             }
             return null;
         }
@@ -5884,7 +5823,7 @@
             else if (info.kind === 'location') openAttrTableFor({ type: 'location', id: Number(info.id) });
         }
         function editLayerStyle(info) {
-            if (info.kind === 'base' || info.kind === 'water') { focusOpacity(info); return; }
+            if (info.kind === 'base') { focusOpacity(info); return; }
             if (typeof openControlPanel === 'function') openControlPanel(info.kind, Number(info.id), info.gtype);
             else focusOpacity(info);
         }
@@ -5902,7 +5841,6 @@
             if (info.kind === 'file' && typeof deleteFileType === 'function') deleteFileType(Number(info.id), info.gtype);
             else if (info.kind === 'custom' && typeof deleteTocItem === 'function') deleteTocItem('custom', Number(info.id));
             else if (info.kind === 'location' && typeof deleteTocItem === 'function') deleteTocItem('location', Number(info.id));
-            else if (info.kind === 'water') { setWaterVisibility(info.key, false); render(); }
         }
 
         function openMenu(ev, info) {
