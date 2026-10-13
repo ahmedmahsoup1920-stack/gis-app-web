@@ -614,6 +614,9 @@
         .sidebar .tabs button i { font-size:14px; }
         .sidebar .tabs button:hover { color:var(--txt); background:rgba(255,255,255,.05); }
         .sidebar .tabs button.active { color:#fff; background:rgba(2,132,199,.16); border-bottom-color:var(--accent); }
+        .sidebar .tabs button.tbp-export { color:#7dd3fc; }
+        .sidebar .tabs button.tbp-export:hover { background:rgba(16,185,129,.14); color:#a7f3d0; }
+        .sidebar .tabs button.tbp-export.active { color:#fff; background:linear-gradient(180deg,rgba(16,185,129,.30),rgba(2,132,199,.20)); border-bottom-color:#10b981; box-shadow:inset 0 0 0 1px rgba(16,185,129,.35),0 6px 16px rgba(16,185,129,.18); }
 
         /* ===== المحتوى ===== */
         .sidebar .content { flex:1; overflow-y:auto; padding:12px; background:transparent; color:var(--txt); }
@@ -825,6 +828,7 @@
             <button data-tab="files"><i class="fas fa-folder-open"></i> Data</button>
             <button data-tab="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
             <button data-tab="cloud"><i class="fas fa-cloud"></i> Cloud</button>
+            <button data-tab="export" class="tbp-export" title="Download &amp; Export"><i class="fas fa-file-export"></i> Export</button>
             <button data-tab="settings"><i class="fas fa-cog"></i> Settings</button>
         </div>
 
@@ -947,6 +951,9 @@
                 </div>
                 <div id="dashBody"></div>
             </div>
+
+            <!-- تبويب التحميل والتصدير -->
+            <div class="tab-pane" id="tab-export"></div>
 
             <!-- تبويب الإعدادات -->
             <div class="tab-pane" id="tab-settings">
@@ -1292,6 +1299,11 @@
             layer: L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg', { maxZoom: 20, maxNativeZoom: 14, attribution: '© EOX · Sentinel-2 cloudless (CC BY-NC-SA)' }),
             icon: 'fa-satellite-dish',
             color: '#10b981'
+        },
+        'OpenAerialMap (طائرات مسيّرة)': {
+            layer: L.tileLayer('https://global.imagery.hotosm.org/{z}/{x}/{y}.png', { maxZoom: 22, maxNativeZoom: 20, attribution: '© OpenAerialMap (HOT)' }),
+            icon: 'fa-plane-up',
+            color: '#8b5cf6'
         }
     };
     // إتاحة خرائط الأساس لوحدات GIS المستقلة (مثل وحدة تصدير الصور الجوية)
@@ -6118,6 +6130,8 @@ const items = [
 <script src="js/gis-labels.js"></script>
 <script src="js/gis-supabase.js"></script>
 <script src="js/gis-imagery.js"></script>
+<script src="js/gis-export.js"></script>
+<script src="js/gis-osm-extractor.js"></script>
 
 <!-- ===== PWA: تسجيل Service Worker + زر التثبيت ===== -->
 <script>
