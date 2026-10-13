@@ -6,7 +6,7 @@
       ويعمل بدون إنترنت عند انقطاعه.
    ================================================================ */
 
-const VERSION = 'gis-water-v30';
+const VERSION = 'gis-water-v31';
 const CACHE = VERSION + '-cache';
 
 /* ملفات التطبيق الأساسية (نخزّنها عند التثبيت) */
@@ -38,6 +38,7 @@ const CORE_ASSETS = [
     './js/gis-timeline.js',
     './js/gis-labels.js',
     './js/gis-supabase.js',
+    './js/gis-imagery.js',
     './icons/logo.svg',
     './icons/icon.svg',
     './icons/icon-192.png',
