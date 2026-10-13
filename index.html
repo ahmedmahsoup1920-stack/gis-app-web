@@ -5574,7 +5574,18 @@
     const guestBtn = document.getElementById('guestEnterBtn');
     if (guestBtn) guestBtn.addEventListener('click', function () { enterApp(); });
     const cloudEnterBtn = document.getElementById('cloudEnterBtn');
-    if (cloudEnterBtn) cloudEnterBtn.addEventListener('click', function () { enterApp('cloud'); });
+    if (cloudEnterBtn) cloudEnterBtn.addEventListener('click', function () {
+        const btn = this;
+        const C = window.GIS && window.GIS.cloud;
+        if (C && typeof C.signInWithOAuth === 'function') {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ التحويل إلى Google…';
+            setTimeout(function () { btn.innerHTML = orig; }, 6000);
+            C.signInWithOAuth('google');
+        } else if (typeof window.showToast === 'function') {
+            window.showToast('تعذّر بدء تسجيل الدخول — اضبط إعدادات Supabase أولًا', 'error', 5200);
+        }
+    });
 
     // دخول تلقائي إن سبق الدخول في هذه الجلسة
     try { if (localStorage.getItem('gisEntered') === '1') enterApp(); } catch (_) {}
