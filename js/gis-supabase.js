@@ -19,6 +19,15 @@
     var projectsLoaded = false;
     var root = null;
 
+    // ---------- حالة المزامنة التلقائية ----------
+    var LS_AUTOSYNC = 'gisAutoSync';
+    var LS_SYNCPID = 'gisAutoSyncProjectId';
+    var autoSyncOn = localStorage.getItem(LS_AUTOSYNC) === '1';
+    var currentProjectId = localStorage.getItem(LS_SYNCPID) || '';
+    var syncTimer = null;
+    var lastSyncAt = 0;
+    var syncBusy = false;
+
     // ---------- helpers ----------
     function configured() { return !!(SB_URL && SB_KEY); }
 
@@ -150,6 +159,7 @@
                 projectsLoaded = false;
                 toast('تم تسجيل الدخول', 'success');
                 render();
+                if (autoSyncOn) autoSync();
             });
     }
 
@@ -170,10 +180,14 @@
             });
     }
 
+    function clearSyncProject() {
+        currentProjectId = '';
+        try { localStorage.removeItem(LS_SYNCPID); } catch (e) {}
+    }
     function signOut() {
-        if (!client) { user = null; projects = []; projectsLoaded = false; render(); return Promise.resolve(); }
+        if (!client) { user = null; projects = []; projectsLoaded = false; clearSyncProject(); render(); return Promise.resolve(); }
         return client.auth.signOut().then(function () {
-            user = null; projects = []; projectsLoaded = false;
+            user = null; projects = []; projectsLoaded = false; clearSyncProject();
             toast('تم تسجيل الخروج', 'info');
             render();
         });
@@ -252,6 +266,66 @@
                 fillList();
             })
             .catch(function (e) { toast('فشل الحذف: ' + errMsg(e), 'error'); });
+    }
+
+    // ---------- auto-sync ----------
+    function genId() {
+        try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+        function h() { return Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1); }
+        return h() + h() + '-' + h() + '-4' + h().slice(0, 3) + '-a' + h().slice(0, 3) + '-' + h() + h() + h();
+    }
+    function syncStateText() {
+        if (!autoSyncOn) return 'متوقفة — فعّلها لمزامنة بياناتك تلقائيًا عند أي تغيير.';
+        if (lastSyncAt) return 'مفعّلة · آخر مزامنة: ' + new Date(lastSyncAt).toLocaleTimeString();
+        return 'مفعّلة · بانتظار أول تغيير…';
+    }
+    function updateSyncState() {
+        if (!root) return;
+        try {
+            var st = root.querySelector('[data-syncstate]');
+            if (st) st.textContent = syncStateText();
+        } catch (e) {}
+    }
+    function setAutoSync(on) {
+        autoSyncOn = !!on;
+        try { localStorage.setItem(LS_AUTOSYNC, autoSyncOn ? '1' : '0'); } catch (e) {}
+        if (autoSyncOn) { toast('تم تفعيل المزامنة التلقائية', 'success'); autoSync(); }
+        else { toast('تم إيقاف المزامنة التلقائية', 'info'); }
+        updateSyncState();
+    }
+    function autoSync() {
+        if (!autoSyncOn || !user || !configured()) return;
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(doAutoSync, syncBusy ? 3000 : 2000);
+    }
+    function doAutoSync() {
+        if (!autoSyncOn || !user) return;
+        if (syncBusy) { clearTimeout(syncTimer); syncTimer = setTimeout(doAutoSync, 2000); return; }
+        if (typeof window.buildSavePayload !== 'function') return;
+        var payload;
+        try { payload = window.buildSavePayload(); } catch (e) { return; }
+        if (!currentProjectId) {
+            currentProjectId = genId();
+            try { localStorage.setItem(LS_SYNCPID, currentProjectId); } catch (e) {}
+        }
+        var row = {
+            id: currentProjectId,
+            owner: user.id,
+            name: 'مشروع المزامنة التلقائية',
+            data: payload,
+            feature_count: projectStats().total
+        };
+        syncBusy = true;
+        getClient()
+            .then(function (c) { return c.from('projects').upsert(row, { onConflict: 'id' }).select('id'); })
+            .then(function (r) {
+                if (r && r.error) throw r.error;
+                lastSyncAt = Date.now();
+                projectsLoaded = false;
+                updateSyncState();
+            })
+            .catch(function (e) { toast('فشل المزامنة التلقائية: ' + errMsg(e), 'error'); })
+            .then(function () { syncBusy = false; });
     }
 
     // ---------- UI ----------
@@ -389,6 +463,13 @@
             '<input data-f="name" type="text" placeholder="اسم المشروع" style="' + INPUT + '">' +
             '<button data-act="save" style="' + BTN + '"><i class="fas fa-cloud-arrow-up"></i> حفظ المشروع الحالي سحابيًا</button>' +
             '</div>' +
+            '<div style="' + CARD + 'margin-bottom:8px">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">' +
+            '<span style="font-weight:700;color:var(--accent,#0284c7)"><i class="fas fa-rotate"></i> المزامنة التلقائية</span>' +
+            '<label class="switch"><input type="checkbox" data-f="autosync"' + (autoSyncOn ? ' checked' : '') + '><span class="slider"></span></label>' +
+            '</div>' +
+            '<div data-syncstate style="font-size:11.5px;color:var(--txt-dim,#94a3b8);margin-top:6px">' + esc(syncStateText()) + '</div>' +
+            '</div>' +
             '<div class="tab-header"><h4><i class="fas fa-database"></i> مشاريعي السحابية</h4>' +
             '<button data-act="reload" class="add-btn" type="button"><i class="fas fa-rotate"></i> تحديث</button></div>' +
             '<div data-list>' + renderList() + '</div>';
@@ -403,6 +484,8 @@
         if (so) so.addEventListener('click', function () { signOut(); });
         var reload = root.querySelector('[data-act="reload"]');
         if (reload) reload.addEventListener('click', function () { projectsLoaded = false; ensureProjects(); });
+        var as = root.querySelector('[data-f="autosync"]');
+        if (as) as.addEventListener('change', function () { setAutoSync(this.checked); });
     }
 
     // ---------- init ----------
@@ -435,6 +518,8 @@
         deleteProject: deleteProject,
         refreshProjects: ensureProjects,
         projectStats: projectStats,
+        autoSync: autoSync,
+        setAutoSync: setAutoSync,
         getUser: function () { return user; },
         render: render
     };
