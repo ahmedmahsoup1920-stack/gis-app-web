@@ -235,6 +235,10 @@
                 '</div>' +
                 '<label style="display:block;font-size:12px;font-weight:700;margin:12px 0 3px;color:var(--txt,#e2e8f0)">مستوى التكبير (الدقة)</label>' +
                 '<select data-f="zoom" style="' + U.selectStyle + '"></select>' +
+                '<label style="display:block;font-size:12px;font-weight:700;margin:12px 0 3px;color:var(--txt,#e2e8f0)">شكل منطقة التصدير</label>' +
+                '<select data-f="aoimode" style="' + U.selectStyle + '"><option value="rect">مستطيل (Bounding Box)</option><option value="poly">مضلع (Polygon)</option></select>' +
+                '<label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;margin:10px 0 3px;color:var(--txt,#e2e8f0);cursor:pointer;"><input type="checkbox" data-f="incvec"> تضمين بيانات الفيكتور داخل النطاق (GeoJSON + KML)</label>' +
+                '<button type="button" data-act="finish" style="' + U.btnStyle + 'display:none;"><i class="fas fa-check"></i> إنهاء المضلع</button>' +
                 '<button type="button" data-act="select" style="' + U.btnStyle + '"><i class="fas fa-vector-square"></i> ارسم مستطيل المنطقة على الخريطة</button>' +
                 '<button type="button" data-act="export" style="' + U.btnStyle + ';background:#059669"><i class="fas fa-file-export"></i> تصدير الصورة (ZIP + GeoTIFF)</button>' +
                 '<div data-f="info" style="margin-top:12px;background:var(--card-bg,#1e293b);border:1px solid var(--card-brd,#334155);border-radius:10px;padding:10px;font-size:12px;line-height:1.9;color:var(--txt,#e2e8f0)">لم تُحدَّد منطقة بعد.</div>' +
@@ -251,15 +255,37 @@
             var infoEl = root.querySelector('[data-f="info"]');
             var progEl = root.querySelector('[data-f="progress"]');
             var selectBtn = root.querySelector('[data-act="select"]');
+            var finishBtn = root.querySelector('[data-act="finish"]');
+            var aoiModeSel = root.querySelector('[data-f="aoimode"]');
+            var incVec = root.querySelector('[data-f="incvec"]');
             var expBtn = root.querySelector('[data-act="export"]');
 
-            var rectLayer = null;
+            var rectLayer = null, polyLayer = null, polyPts = [], polyMarkers = null;
             var drawing = false, startLatLng = null;
+            function aoiMode() { return aoiModeSel ? aoiModeSel.value : 'rect'; }
 
             function bbox() {
-                if (!rectLayer) { return null; }
-                var b = rectLayer.getBounds();
+                var b = null;
+                if (aoiMode() === 'poly' && polyLayer) { b = polyLayer.getBounds(); }
+                else if (rectLayer) { b = rectLayer.getBounds(); }
+                if (!b || !b.isValid() || (b.getNorth() - b.getSouth()) < 1e-6 || (b.getEast() - b.getWest()) < 1e-6) { return null; }
                 return { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() };
+            }
+            function clearAoi() {
+                if (rectLayer) { try { map.removeLayer(rectLayer); } catch (e) {} rectLayer = null; }
+                if (polyLayer) { try { map.removeLayer(polyLayer); } catch (e) {} polyLayer = null; }
+                if (polyMarkers) { try { map.removeLayer(polyMarkers); } catch (e) {} polyMarkers = null; }
+                polyPts = [];
+            }
+            function aoiPolygonCoords() {
+                if (aoiMode() === 'poly' && polyPts.length >= 3) {
+                    var ring = polyPts.map(function (ll) { return [ll.lng, ll.lat]; });
+                    if (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1]) { ring.push([ring[0][0], ring[0][1]]); }
+                    return [ring];
+                }
+                var box = bbox();
+                if (!box) { return null; }
+                return [[[box.west, box.south], [box.east, box.south], [box.east, box.north], [box.west, box.north], [box.west, box.south]]];
             }
             function currentSource() {
                 var key = srcSel.value;
@@ -304,15 +330,27 @@
             }
 
             /* --- الرسم على الخريطة ---------------- */
+            function stopMapEvents() {
+                map.off('mousedown', onDown); map.off('mousemove', onMove); map.off('mouseup', onUp); map.off('click', onPolyClick);
+            }
             function beginSelect() {
-                if (rectLayer) { try { map.removeLayer(rectLayer); } catch (e) {} rectLayer = null; }
+                clearAoi();
+                stopMapEvents();
                 updateInfo();
                 drawing = true;
-                map.dragging.disable();
                 map.getContainer().style.cursor = 'crosshair';
-                selectBtn.innerHTML = '<i class="fas fa-hand-pointer"></i> جارٍ التحديد… اسحب على الخريطة';
-                ctx.notify('انقر واسحب على الخريطة لتحديد منطقة التصدير', 'info', 4200);
-                map.once('mousedown', onDown);
+                if (aoiMode() === 'poly') {
+                    finishBtn.style.display = 'block';
+                    map.on('click', onPolyClick);
+                    selectBtnLabel(true);
+                    ctx.notify('انقر على الخريطة لإضافة نقاط المضلع ثم اضغط «إنهاء المضلع»', 'info', 4600);
+                } else {
+                    finishBtn.style.display = 'none';
+                    map.dragging.disable();
+                    map.once('mousedown', onDown);
+                    selectBtnLabel(true);
+                    ctx.notify('انقر واسحب على الخريطة لتحديد منطقة التصدير', 'info', 4200);
+                }
             }
             function onDown(e) {
                 if (!drawing) { return; }
@@ -335,18 +373,46 @@
                 map.getContainer().style.cursor = '';
                 selectBtnLabel(false);
                 var box = bbox();
-                if (!box || (box.north - box.south) < 1e-5 || (box.east - box.west) < 1e-5) {
-                    if (rectLayer) { try { map.removeLayer(rectLayer); } catch (e) {} rectLayer = null; }
+                if (!box) {
+                    clearAoi();
                     ctx.notify('المستطيل صغير جدًا — أعد المحاولة', 'warn');
                 } else {
                     ctx.notify('تم تحديد المنطقة', 'success');
                 }
                 updateInfo();
             }
+            function onPolyClick(e) {
+                if (!drawing || aoiMode() !== 'poly') { return; }
+                polyPts.push(e.latlng);
+                renderPoly();
+            }
+            function renderPoly() {
+                if (polyLayer) { try { map.removeLayer(polyLayer); } catch (e) {} polyLayer = null; }
+                if (polyMarkers) { try { map.removeLayer(polyMarkers); } catch (e) {} polyMarkers = null; }
+                if (polyPts.length >= 2) {
+                    polyLayer = L.polygon(polyPts, { color: '#38bdf8', weight: 2, fillColor: '#38bdf8', fillOpacity: 0.15, dashArray: '6 4' }).addTo(map);
+                }
+                polyMarkers = L.layerGroup(polyPts.map(function (ll) {
+                    return L.circleMarker(ll, { radius: 4, color: '#f59e0b', weight: 2, fillColor: '#fbbf24', fillOpacity: 1 });
+                })).addTo(map);
+                updateInfo();
+            }
+            function finishPoly() {
+                stopMapEvents();
+                drawing = false;
+                map.getContainer().style.cursor = '';
+                selectBtnLabel(false);
+                if (polyPts.length < 3) {
+                    ctx.notify('أضف ٣ نقاط على الأقل لإنشاء المضلع', 'warn');
+                    return;
+                }
+                renderPoly();
+                ctx.notify('تم إنشاء المضلع', 'success');
+            }
             function selectBtnLabel(active) {
                 selectBtn.innerHTML = active
-                    ? '<i class="fas fa-hand-pointer"></i> جارٍ التحديد… اسحب على الخريطة'
-                    : '<i class="fas fa-vector-square"></i> ارسم مستطيل المنطقة على الخريطة';
+                    ? '<i class="fas fa-hand-pointer"></i> جارٍ الرسم…'
+                    : (aoiMode() === 'poly' ? '<i class="fas fa-draw-polygon"></i> أضف نقاط المضلع' : '<i class="fas fa-vector-square"></i> ارسم مستطيل المنطقة');
             }
 
             function setProgress(text, pct) {
@@ -414,8 +480,8 @@
                         (mo.originX + mo.pxRes / 2).toFixed(6) + '\n' + (mo.originY - mo.pxRes / 2).toFixed(6) + '\n';
                     var geojson = {
                         type: 'Feature',
-                        properties: { name: 'AOI', zoom: z, source: src.key, crs: 'EPSG:3857' },
-                        geometry: { type: 'Polygon', coordinates: [[[box.west, box.south], [box.east, box.south], [box.east, box.north], [box.west, box.north], [box.west, box.south]]] }
+                        properties: { name: 'AOI', zoom: z, source: src.key, crs: 'EPSG:3857', shape: aoiMode() },
+                        geometry: { type: 'Polygon', coordinates: aoiPolygonCoords() }
                     };
                     var readme =
                         'Aerial Imagery Export\r\n' +
@@ -432,7 +498,8 @@
                         '  imagery.pgw  - world file for imagery.png (Web Mercator metres)\r\n' +
                         '  imagery.prj  - coordinate system (WKT, EPSG:3857)\r\n' +
                         '  imagery.tif  - georeferenced GeoTIFF (EPSG:3857)\r\n' +
-                        '  aoi.geojson  - export extent in WGS84 lon/lat\r\n';
+                        '  aoi.geojson  - export extent in WGS84 lon/lat\r\n' +
+                        '  aoi_features.* - vector features inside the AOI (if included)\r\n';
 
                     var zip = new window.JSZip();
                     zip.file('imagery.png', pngBlob);
@@ -440,6 +507,29 @@
                     zip.file('imagery.prj', WKT_3857);
                     zip.file('imagery.tif', tifBytes);
                     zip.file('aoi.geojson', JSON.stringify(geojson, null, 2));
+
+                    if (incVec && incVec.checked && typeof window.collectExportFeatures === 'function') {
+                        try {
+                            var all = window.collectExportFeatures('visible');
+                            var bounds = L.latLngBounds(L.latLng(box.south, box.west), L.latLng(box.north, box.east));
+                            var usePoly = (aoiMode() === 'poly' && polyLayer && window.turf);
+                            var polyFC = usePoly ? polyLayer.toGeoJSON() : null;
+                            var inside = all.filter(function (f) {
+                                try {
+                                    if (usePoly) { return turf.booleanIntersects(f, polyFC); }
+                                    var lay = L.geoJSON(f);
+                                    var b = lay.getBounds();
+                                    return b.isValid() && b.intersects(bounds);
+                                } catch (e) { return false; }
+                            });
+                            if (inside.length) {
+                                zip.file('aoi_features.geojson', JSON.stringify({ type: 'FeatureCollection', features: inside }, null, 2));
+                                if (typeof window.geojsonToKML === 'function') {
+                                    zip.file('aoi_features.kml', window.geojsonToKML({ type: 'FeatureCollection', features: inside }, 'aoi_features'));
+                                }
+                            }
+                        } catch (e) {}
+                    }
                     zip.file('README.txt', readme);
                     setProgress('ضغط الملفات…', 100);
                     var blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
@@ -464,7 +554,9 @@
             customInput.addEventListener('input', updateInfo);
             maxZoomInput.addEventListener('input', function () { rebuildZoomOptions(); updateInfo(); });
             zoomSel.addEventListener('change', updateInfo);
+            if (aoiModeSel) { aoiModeSel.addEventListener('change', function () { clearAoi(); selectBtnLabel(false); finishBtn.style.display = 'none'; updateInfo(); }); }
             selectBtn.addEventListener('click', beginSelect);
+            finishBtn.addEventListener('click', finishPoly);
             expBtn.addEventListener('click', function () { doExport(); });
 
             var onMoveEnd = function () { if (rectLayer) { updateInfo(); } };
@@ -474,10 +566,10 @@
             updateInfo();
 
             this._cleanup = function () {
-                try { map.off('mousedown', onDown); map.off('mousemove', onMove); map.off('mouseup', onUp); } catch (e) {}
+                try { stopMapEvents(); } catch (e) {}
                 try { map.off('moveend', onMoveEnd); } catch (e) {}
                 if (drawing) { try { map.dragging.enable(); } catch (e) {} }
-                if (rectLayer) { try { map.removeLayer(rectLayer); } catch (e) {} rectLayer = null; }
+                clearAoi();
                 try { map.getContainer().style.cursor = ''; } catch (e) {}
             };
         },
