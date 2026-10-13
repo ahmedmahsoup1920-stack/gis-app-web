@@ -789,7 +789,7 @@
 <div id="appRoot">
 <header class="header">
     <div class="logo">
-        <img class="icon" src="icons/icon-192.png" alt="شعار التطبيق" />
+        <img class="icon" src="icons/logo.svg" alt="شعار التطبيق" />
         <div>
             <div class="title">نظام المعلومات الجغرافية</div>
             <div class="subtitle">قطاع المياه · شبكات التوزيع والصرف</div>
@@ -933,22 +933,6 @@
                 </div>
                 <div class="coord-hint" style="margin-top:12px"><i class="fas fa-layer-group"></i> All uploaded layers appear automatically in the &laquo;Advanced Layers&raquo; panel on the right.</div>
 
-                <div class="set-sec" id="cloudSec" style="margin-top:14px">
-                    <h5><i class="fas fa-cloud"></i> Cloud Sync · JSONBin.io</h5>
-                    <div class="set-row">
-                        <label>X-Master-Key</label>
-                        <input type="password" id="binKey" placeholder="$2b$10$..." autocomplete="off" />
-                    </div>
-                    <div class="set-row">
-                        <label>Bin ID</label>
-                        <input type="text" id="binId" placeholder="Leave empty to create a new bin" autocomplete="off" />
-                    </div>
-                    <div class="save-row">
-                        <button type="button" class="save-btn" id="cloudSaveBtn"><i class="fas fa-cloud-arrow-up"></i> Save to Cloud</button>
-                        <button type="button" class="export-btn" id="cloudLoadBtn" style="flex:1;" title="Load from cloud"><i class="fas fa-cloud-arrow-down"></i> Load</button>
-                    </div>
-                    <div class="save-status" id="cloudStatus"></div>
-                </div>
                 <div class="tab-header" style="margin-top:16px">
                     <h4><i class="fas fa-folder"></i> Uploaded Files<span class="file-count-badge" id="fileCount">0</span></h4>
                 </div>
@@ -5494,101 +5478,6 @@
         else { currentData=null; currentFileName=''; }
         updateTOC();
     }
-
-    // ================================================================
-    //  المزامنة السحابية عبر JSONBin.io  (حفظ/استدعاء المواقع والبيانات)
-    // ================================================================
-    function cloudEls() {
-        return { key: document.getElementById('binKey'), bin: document.getElementById('binId') };
-    }
-    function cloudStatus(msg, isError) {
-        const el = document.getElementById('cloudStatus');
-        if (!el) return;
-        el.textContent = msg;
-        el.style.color = isError ? '#c0392b' : '#0e8f8a';
-        clearTimeout(cloudStatus._t);
-        cloudStatus._t = setTimeout(() => { el.textContent = ''; }, 6000);
-    }
-    function loadCloudCreds() {
-        try {
-            const k = localStorage.getItem('jsonbinKey') || '';
-            const b = localStorage.getItem('jsonbinBin') || '';
-            const e = cloudEls();
-            if (e.key && k) e.key.value = k;
-            if (e.bin && b) e.bin.value = b;
-        } catch (_) {}
-    }
-    function saveCloudCreds(key, bin) {
-        try {
-            if (key != null) localStorage.setItem('jsonbinKey', key);
-            if (bin != null) localStorage.setItem('jsonbinBin', bin);
-        } catch (_) {}
-    }
-
-    window.saveToCloud = async function() {
-        const e = cloudEls();
-        const key = (e.key.value || '').trim();
-        let bin = (e.bin.value || '').trim();
-        if (!key) { cloudStatus('⚠️ أدخل X-Master-Key أولاً', true); return; }
-        const btn = document.getElementById('cloudSaveBtn');
-        const old = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-        try {
-            const payload = buildSavePayload();
-            const headers = { 'Content-Type': 'application/json', 'X-Master-Key': key };
-            let res;
-            if (!bin) {
-                headers['X-Bin-Name'] = 'water-gis-' + new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
-                headers['X-Bin-Private'] = 'true';
-                res = await fetch('https://api.jsonbin.io/v3/b', { method: 'POST', headers, body: JSON.stringify(payload) });
-            } else {
-                res = await fetch('https://api.jsonbin.io/v3/b/' + encodeURIComponent(bin), { method: 'PUT', headers, body: JSON.stringify(payload) });
-            }
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error((data && data.message) || ('HTTP ' + res.status));
-            const newBin = (data.metadata && data.metadata.id) || bin;
-            if (newBin) { bin = newBin; if (e.bin) e.bin.value = bin; }
-            saveCloudCreds(key, bin);
-            cloudStatus('☁️ تم الحفظ على السحابة بنجاح' + (bin ? ' · Bin: ' + bin : ''));
-        } catch (err) {
-            cloudStatus('❌ فشل الحفظ: ' + err.message, true);
-        } finally {
-            btn.disabled = false; btn.innerHTML = old;
-        }
-    };
-
-    window.loadFromCloud = async function() {
-        const e = cloudEls();
-        const key = (e.key.value || '').trim();
-        const bin = (e.bin.value || '').trim();
-        if (!key || !bin) { cloudStatus('⚠️ أدخل X-Master-Key و Bin ID', true); return; }
-        const btn = document.getElementById('cloudLoadBtn');
-        const old = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-        try {
-            const res = await fetch('https://api.jsonbin.io/v3/b/' + encodeURIComponent(bin) + '/latest', { headers: { 'X-Master-Key': key } });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error((data && data.message) || ('HTTP ' + res.status));
-            const payload = data.record || data;
-            if (!payload || typeof payload !== 'object') throw new Error('لا توجد بيانات في الـ Bin');
-            applyPayload(payload);
-            saveCloudCreds(key, bin);
-            cloudStatus('☁️ تم الاسترجاع من السحابة بنجاح');
-        } catch (err) {
-            cloudStatus('❌ فشل الاسترجاع: ' + err.message, true);
-        } finally {
-            btn.disabled = false; btn.innerHTML = old;
-        }
-    };
-
-    (function initCloud() {
-        const s = document.getElementById('cloudSaveBtn');
-        const l = document.getElementById('cloudLoadBtn');
-        if (s) s.addEventListener('click', function () { window.saveToCloud(); });
-        if (l) l.addEventListener('click', function () { window.loadFromCloud(); });
-        const e = cloudEls();
-        if (e.key) e.key.addEventListener('change', function () { saveCloudCreds(this.value.trim(), null); });
-        if (e.bin) e.bin.addEventListener('change', function () { saveCloudCreds(null, this.value.trim()); });
-        loadCloudCreds();
-    })();
 
     // زر الاستيراد: فتح ملف محفوظ من الجهاز واسترجاع بياناته
     document.getElementById('importDataBtn').addEventListener('click', function() {
