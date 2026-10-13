@@ -6,13 +6,14 @@
       ويعمل بدون إنترنت عند انقطاعه.
    ================================================================ */
 
-const VERSION = 'gis-water-v31';
+const VERSION = 'gis-water-v32';
 const CACHE = VERSION + '-cache';
 
 /* ملفات التطبيق الأساسية (نخزّنها عند التثبيت) */
 const CORE_ASSETS = [
     './',
     './index.html',
+    './landing.html',
     './manifest.json',
     './js/gis-core.js',
     './js/gis-system-info.js',
