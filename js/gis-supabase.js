@@ -9,6 +9,8 @@
     var SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
     var LS_URL = 'gisSbUrl';
     var LS_KEY = 'gisSbKey';
+    var APP_VERSION = 'v41';
+    var sessionOpenLogged = false;
 
     var SB_URL = localStorage.getItem(LS_URL) || '';
     var SB_KEY = localStorage.getItem(LS_KEY) || '';
@@ -104,7 +106,7 @@
                     auth: { persistSession: true, autoRefreshToken: true }
                 });
                 try {
-                    client.auth.onAuthStateChange(function (_evt, session) {
+                    client.auth.onAuthStateChange(function (evt, session) {
                         user = (session && session.user) ? session.user : null;
                         projectsLoaded = false;
                         render();
@@ -113,6 +115,10 @@
                             try { entered = localStorage.getItem('gisEntered') === '1'; } catch (e) {}
                             if (!entered) { try { window.enterApp('cloud'); } catch (e) {} }
                         }
+                        try {
+                            if (evt === 'SIGNED_IN' && user) { logEvent('login'); }
+                            else if (evt === 'INITIAL_SESSION' && user && !sessionOpenLogged) { sessionOpenLogged = true; logEvent('open'); }
+                        } catch (e) {}
                     });
                 } catch (e) {}
             }
@@ -152,6 +158,35 @@
         try { o.measurements = ((typeof measurements !== 'undefined' ? measurements : []) || []).length; } catch (e) {}
         o.total = o.features + o.customs + o.locations;
         return o;
+    }
+
+    // ---------- usage events ----------
+    function deviceInfo() {
+        var ua = navigator.userAgent || '';
+        var os = /Windows/i.test(ua) ? 'Windows' : /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS' : /Macintosh|Mac OS X/i.test(ua) ? 'macOS' : /Linux/i.test(ua) ? 'Linux' : 'Unknown';
+        var br = /Edg\//i.test(ua) ? 'Edge' : /OPR\//i.test(ua) ? 'Opera' : /Chrome\//i.test(ua) ? 'Chrome' : /Firefox\//i.test(ua) ? 'Firefox' : /Safari\//i.test(ua) ? 'Safari' : 'Unknown';
+        return os + ' · ' + br;
+    }
+    function logEvent(evt, extra) {
+        if (!configured()) { return Promise.resolve(false); }
+        var row = {
+            event: String(evt || 'event'),
+            email: (extra && extra.email) || (user && user.email) || null,
+            user_id: (user && user.id) || null,
+            device: deviceInfo(),
+            app_version: (extra && extra.version) || APP_VERSION
+        };
+        return getClient()
+            .then(function (c) { return c.from('app_events').insert(row); })
+            .then(function (r) { if (r && r.error) { throw r.error; } return true; })
+            .catch(function () { return false; });
+    }
+    function listEvents(limit) {
+        return getClient()
+            .then(function (c) {
+                return c.from('app_events').select('*').order('created_at', { ascending: false }).limit(limit || 300);
+            })
+            .then(function (r) { if (r.error) { throw r.error; } return r.data || []; });
     }
 
     // ---------- auth ----------
@@ -519,6 +554,8 @@
         signUp: signUp,
         signOut: signOut,
         signInWithOAuth: signInWithOAuth,
+        logEvent: logEvent,
+        listEvents: listEvents,
         saveProject: saveProject,
         loadProject: loadProject,
         deleteProject: deleteProject,
