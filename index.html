@@ -778,12 +778,16 @@
 <div id="loginScreen">
     <div class="login-box">
         <div class="login-icon"><i class="fas fa-droplet"></i></div>
-        <h2>مرحبًا بك</h2>
+        <h2>تسجيل الدخول</h2>
         <div class="login-sub">نظام المعلومات الجغرافية · قطاع المياه</div>
-        <button type="button" class="login-btn" id="guestEnterBtn"><i class="fas fa-user"></i> الدخول كزائر</button>
-        <button type="button" class="login-btn" id="cloudEnterBtn" style="margin-top:10px;background:linear-gradient(135deg,#0284c7,#0ea5e9)"><i class="fas fa-cloud"></i> تسجيل الدخول بحساب</button>
+        <button type="button" class="login-btn" id="cloudEnterBtn" style="background:linear-gradient(135deg,#0284c7,#0ea5e9)"><i class="fab fa-google"></i> الدخول بحساب Google</button>
+        <div style="display:flex;align-items:center;gap:8px;margin:14px 0 2px;color:#94a3b8;font-size:11px"><span style="flex:1;height:1px;background:#334155"></span>أو بالبريد<span style="flex:1;height:1px;background:#334155"></span></div>
+        <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" autocomplete="username" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit;margin-top:8px" />
+        <input type="password" id="loginPass" placeholder="كلمة المرور" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;font-family:inherit;margin-top:8px" />
+        <button type="button" class="login-btn" id="emailLoginBtn"><i class="fas fa-right-to-bracket"></i> تسجيل الدخول</button>
+        <button type="button" class="login-btn" id="emailRegisterBtn" style="margin-top:8px;background:transparent;color:#0a2a44;border:1px solid #cbd5e1"><i class="fas fa-user-plus"></i> إنشاء حساب جديد</button>
         <div class="login-error" id="loginError"></div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:16px;line-height:1.7">الدخول كزائر يعمل بدون حساب.<br>تسجيل الدخول يتيح حفظ ومزامنة مشاريعك سحابيًا (Google · GitHub · البريد).</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:16px;line-height:1.7">الدخول متاح للحسابات المصرّح بها فقط — بدون حساب لا يمكن فتح التطبيق.<br>سجّل الدخول بحساب Google أو بالبريد لحفظ ومزامنة مشاريعك سحابيًا.</div>
         <div style="margin-top:12px"><a href="landing.html" style="color:#0284c7;font-weight:700;font-size:12.5px;text-decoration:none"><i class="fas fa-circle-info"></i> تعرّف على مميزات التطبيق</a></div>
     </div>
 </div>
@@ -5571,10 +5575,10 @@
     window.enterApp = enterApp;
     window.leaveApp = function () { try { localStorage.removeItem('gisEntered'); } catch (_) {} location.reload(); };
 
-    const guestBtn = document.getElementById('guestEnterBtn');
-    if (guestBtn) guestBtn.addEventListener('click', function () { enterApp(); });
     const cloudEnterBtn = document.getElementById('cloudEnterBtn');
     if (cloudEnterBtn) cloudEnterBtn.addEventListener('click', function () {
+        const errEl = document.getElementById('loginError');
+        if (errEl) errEl.textContent = '';
         const btn = this;
         const C = window.GIS && window.GIS.cloud;
         if (C && typeof C.signInWithOAuth === 'function') {
@@ -5583,12 +5587,47 @@
             setTimeout(function () { btn.innerHTML = orig; }, 6000);
             C.signInWithOAuth('google');
         } else if (typeof window.showToast === 'function') {
-            window.showToast('تعذّر بدء تسجيل الدخول — اضبط إعدادات Supabase أولًا', 'error', 5200);
+            window.showToast('تعذّر بدء تسجيل الدخول — اضبط إعدادات السحابة أولًا', 'error', 5200);
         }
     });
 
-    // دخول تلقائي إن سبق الدخول في هذه الجلسة
-    try { if (localStorage.getItem('gisEntered') === '1') enterApp(); } catch (_) {}
+    const emailLoginBtn = document.getElementById('emailLoginBtn');
+    if (emailLoginBtn) emailLoginBtn.addEventListener('click', function () {
+        var errEl = document.getElementById('loginError');
+        if (errEl) errEl.textContent = '';
+        var C = window.GIS && window.GIS.cloud;
+        if (!C || typeof C.signIn !== 'function') { if (typeof window.showToast === 'function') window.showToast('تعذّر الاتصال بالسحابة', 'error'); return; }
+        var e = document.getElementById('loginEmail').value.trim();
+        var p = document.getElementById('loginPass').value;
+        if (!e || !p) { if (errEl) errEl.textContent = 'أدخل البريد وكلمة المرور'; return; }
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ الدخول…';
+        var self = this;
+        C.signIn(e, p).then(function () { enterApp('cloud'); })
+            .catch(function (err) { self.innerHTML = '<i class="fas fa-right-to-bracket"></i> تسجيل الدخول'; if (errEl) errEl.textContent = (err && err.message) ? err.message : 'فشل تسجيل الدخول'; });
+    });
+
+    const emailRegisterBtn = document.getElementById('emailRegisterBtn');
+    if (emailRegisterBtn) emailRegisterBtn.addEventListener('click', function () {
+        var errEl = document.getElementById('loginError');
+        if (errEl) errEl.textContent = '';
+        var C = window.GIS && window.GIS.cloud;
+        if (!C || typeof C.signUp !== 'function') { if (typeof window.showToast === 'function') window.showToast('تعذّر الاتصال بالسحابة', 'error'); return; }
+        var e = document.getElementById('loginEmail').value.trim();
+        var p = document.getElementById('loginPass').value;
+        if (!e || !p) { if (errEl) errEl.textContent = 'أدخل البريد وكلمة المرور'; return; }
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ الإنشاء…';
+        var self = this;
+        C.signUp(e, p).then(function (d) {
+            self.innerHTML = '<i class="fas fa-user-plus"></i> إنشاء حساب جديد';
+            if (d && d.session) { enterApp('cloud'); }
+            else if (errEl) { errEl.textContent = 'تم إنشاء الحساب — راجع بريدك للتأكيد ثم سجّل الدخول'; }
+        }).catch(function (err) {
+            self.innerHTML = '<i class="fas fa-user-plus"></i> إنشاء حساب جديد';
+            if (errEl) errEl.textContent = (err && err.message) ? err.message : 'تعذّر إنشاء الحساب';
+        });
+    });
+
+    // لا يوجد دخول تلقائي كزائر — الدخول يتم فقط بعد مصادقة ناجحة (Google/البريد)
 
 
     // ================================================================
@@ -6143,11 +6182,18 @@ const items = [
 <script src="js/gis-imagery.js"></script>
 <script src="js/gis-export.js"></script>
 <script src="js/gis-osm-extractor.js"></script>
+<script src="js/gis-usage.js"></script>
 
 <!-- ===== PWA: تسجيل Service Worker + زر التثبيت ===== -->
 <script>
     (function () {
         if (!('serviceWorker' in navigator)) return;
+
+        // لو وصل Service Worker جديد، نأخذ التحكم ونعيد التحميل مرة واحدة لمسح الكاش القديم
+        var swRefreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+            if (swRefreshing) { location.reload(); }
+        });
 
         window.addEventListener('load', function () {
             navigator.serviceWorker.register('sw.js')
@@ -6163,7 +6209,10 @@ const items = [
                         if (!nw) return;
                         nw.addEventListener('statechange', function () {
                             if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-                                console.log('🆕 يوجد تحديث جديد — أعد فتح التطبيق لتطبيقه');
+                                console.log('🆕 تحديث جديد — جارٍ تطبيقه ومسح الكاش القديم');
+                                swRefreshing = true;
+                                try { nw.postMessage('SKIP_WAITING'); } catch (e) {}
+                                setTimeout(function () { if (swRefreshing) location.reload(); }, 800);
                             }
                         });
                     });
